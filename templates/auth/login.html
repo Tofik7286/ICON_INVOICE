@@ -1,0 +1,13 @@
+{% extends "invoices/base.html" %}
+{% block title %}Login{% endblock %}
+{% block content %}
+<div class="card p-4 mx-auto" style="max-width:400px;">
+  <h3>🔑 Login</h3>
+  <form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button class="btn btn-success">Login</button>
+  </form>
+  {% comment %} <p class="mt-2">New user? <a href="{% url 'register' %}">Register</a></p> {% endcomment %}
+</div>
+{% endblock %}

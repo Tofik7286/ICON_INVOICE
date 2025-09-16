@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    @page { size: A4; margin: 20mm; }
+    body { font-family: Arial, sans-serif; font-size: 12px; }
+    h3 { text-align: center; margin-bottom: 10px; }
+    table { width: 100%; border-collapse: collapse; }
+    table, th, td { border: 1px solid #444; }
+    th, td { padding: 6px; }
+    .no-border { border: none; }
+    .right { text-align: right; }
+    .signature { margin-top: 40px; text-align: right; }
+  </style>
+</head>
+<body>
+  <h3>TAX INVOICE</h3>
+
+  <table class="no-border">
+    <tr>
+      <td width="50%">
+        <strong>From:</strong><br>
+        {{ invoice.from_party.name }}<br>
+        {{ invoice.from_party.address_line1 }}<br>
+        {{ invoice.from_party.city }} - {{ invoice.from_party.pincode }}<br>
+        GST: {{ invoice.from_party.gstin }}
+      </td>
+      <td width="50%">
+        <strong>To:</strong><br>
+        {{ invoice.to_party.name }}<br>
+        {{ invoice.to_party.address_line1 }}<br>
+        {{ invoice.to_party.city }} - {{ invoice.to_party.pincode }}<br>
+        GST: {{ invoice.to_party.gstin }}
+      </td>
+    </tr>
+  </table>
+
+  <p><strong>Invoice No:</strong> {{ invoice.invoice_number }} | <strong>Date:</strong> {{ invoice.date }}</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Description</th>
+        <th>HSN</th>
+        <th>Qty</th>
+        <th>Unit</th>
+        <th>Rate</th>
+        <th>Amount</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in invoice.items.all %}
+      <tr>
+        <td>{{ forloop.counter }}</td>
+        {% comment %} <td>{{ item.product.name if item.product else item.description }}</td> {% endcomment %}
+        <td>{{ item.hsn_sac }}</td>
+        <td class="right">{{ item.quantity }}</td>
+        <td>{{ item.unit.label }}</td>
+        <td class="right">{{ item.rate }}</td>
+        <td class="right">{{ item.line_taxable_amount }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <table class="no-border" style="margin-top:15px;">
+    <tr>
+      <td class="no-border" width="60%"></td>
+      <td class="no-border">
+        <table>
+          <tr><td>Subtotal</td><td class="right">{{ invoice.taxable_subtotal }}</td></tr>
+          <tr><td>Discount</td><td class="right">-{{ invoice.total_discount_amount }}</td></tr>
+          {% if invoice.apply_gst %}
+            {% if invoice.is_igst %}
+              <tr><td>IGST {{ invoice.tax.rate_percent }}%</td><td class="right">{{ invoice.tax_amounts.igst }}</td></tr>
+            {% else %}
+              <tr><td>CGST {{ invoice.tax.rate_percent|floatformat:0|divisibleby:2 }}%</td><td class="right">{{ invoice.tax_amounts.cgst }}</td></tr>
+              <tr><td>SGST {{ invoice.tax.rate_percent|floatformat:0|divisibleby:2 }}%</td><td class="right">{{ invoice.tax_amounts.sgst }}</td></tr>
+            {% endif %}
+          {% endif %}
+          <tr><td><strong>Total</strong></td><td class="right"><strong>{{ invoice.grand_total }}</strong></td></tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+
+  {% comment %} <p><strong>Amount in Words:</strong> {{ invoice.grand_total|amount_to_words }}</p> {% endcomment %}
+
+  <div class="signature">
+    For {{ invoice.from_party.name }}<br><br>
+    Authorised Signatory
+  </div>
+</body>
+</html>

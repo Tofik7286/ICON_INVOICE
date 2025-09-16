@@ -1,0 +1,74 @@
+{% extends "invoices/base.html" %}
+
+{% block title %}New Invoice{% endblock %}
+
+{% block content %}
+<div class="card p-4">
+  <h3 class="mb-4">🧾 Create New Invoice</h3>
+  <form method="post">
+    {% csrf_token %}
+
+    <div class="row mb-3">
+      <div class="col-md-3">
+        <label class="form-label">Date</label>
+        {{ form.date }}
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">From Party</label>
+        {{ form.from_party }}
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">To Party</label>
+        {{ form.to_party }}
+      </div>
+    </div>
+
+    <div class="row mb-3">
+      <div class="col-md-3">
+        <label class="form-label">Overall Discount (%)</label>
+        {{ form.overall_discount_percent }}
+      </div>
+      <div class="col-md-3">
+        <label class="form-check-label">{{ form.apply_gst }} Apply GST?</label>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Tax Slab</label>
+        {{ form.tax }}
+      </div>
+    </div>
+
+    <hr>
+    <h5>📦 Items</h5>
+    <table class="table table-bordered align-middle text-center">
+      <thead class="table-light">
+        <tr>
+          <th>Product</th>
+          <th>HSN/SAC</th>
+          <th>Qty</th>
+          <th>Unit</th>
+          <th>Rate</th>
+          <th>Discount %</th>
+          <th>Remove</th>
+        </tr>
+      </thead>
+      <tbody id="item-rows">
+        {{ formset.management_form }}
+        {% for form in formset %}
+        <tr>
+          <td>{{ form.product }}</td>
+          <td>{{ form.hsn_sac }}</td>
+          <td>{{ form.quantity }}</td>
+          <td>{{ form.unit }}</td>
+          <td>{{ form.rate }}</td>
+          <td>{{ form.discount_percent }}</td>
+          <td>{{ form.DELETE }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <button type="submit" class="btn btn-primary">💾 Save & Preview</button>
+    <a href="{% url 'invoices:list' %}" class="btn btn-secondary">Cancel</a>
+  </form>
+</div>
+{% endblock %}
