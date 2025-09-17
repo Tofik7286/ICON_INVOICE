@@ -6,11 +6,14 @@ from django.template.loader import render_to_string
 from django.core.paginator import Paginator
 from django.utils import timezone
 import os
+from .models import *
 from django.shortcuts import render, redirect
 from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required
 from .forms import CustomUserCreationForm, CustomLoginForm
-
+from django.contrib.auth.decorators import user_passes_test
+from django.shortcuts import render
+from .models import CustomUser
 
 from weasyprint import HTML
 
@@ -19,6 +22,10 @@ from .models import (
     Invoice, InvoiceItem, InvoiceSequence,
     InvoiceAudit, Company
 )
+from django.shortcuts import redirect
+
+def root_redirect(request):
+    return redirect("accounts:login")
 
 
 # ----------------------
@@ -28,7 +35,11 @@ def _generate_invoice_number(seq_no, date):
     seq_str = str(seq_no).zfill(4)  # 0001
     return f"INV_{seq_str}_{date.strftime('%Y%m%d')}"
 
-
+# sirf staff/admin users ko access mile
+@user_passes_test(lambda u: u.is_staff)
+def user_list(request):
+    users = CustomUser.objects.all()
+    return render(request, "users/list.html", {"users": users})
 # ----------------------
 # Create Invoice
 # ----------------------
@@ -36,9 +47,10 @@ def _generate_invoice_number(seq_no, date):
 def invoice_create(request):
     if request.method == "POST":
         form = InvoiceForm(request.POST)
-        formset = InvoiceItemFormSet(request.POST)
+        formset = InvoiceItemFormSet(request.POST, prefix="items")  # ✅ prefix added
         if form.is_valid() and formset.is_valid():
             with transaction.atomic():
+                # Sequence locking
                 seq, _ = InvoiceSequence.objects.select_for_update().get_or_create(pk=1)
                 seq.last_number += 1
                 seq_no = seq.last_number
@@ -54,21 +66,38 @@ def invoice_create(request):
                     invoice.is_igst = (invoice.from_party.state != invoice.to_party.state)
 
                 invoice.save()
+
+                # Link items
                 formset.instance = invoice
                 formset.save()
 
+                # Audit log
                 InvoiceAudit.objects.create(
-                    invoice=invoice, user=request.user, action="created",
+                    invoice=invoice,
+                    user=request.user,
+                    action="created",
                     note=f"Invoice {invoice.invoice_number} created."
                 )
+
                 return redirect("invoices:preview", pk=invoice.pk)
     else:
         form = InvoiceForm(initial={"date": timezone.localdate()})
-        formset = InvoiceItemFormSet()
+        formset = InvoiceItemFormSet(prefix="items")  # ✅ prefix added
 
-    return render(request, "invoices/create.html", {"form": form, "formset": formset})
+    # ✅ Send product data for JS auto-fill
+    products = Product.objects.values(
+        "id", "hsn_sac", "rate", "default_unit__id", "default_unit__label"
+    )
 
-
+    return render(
+        request,
+        "invoices/create.html",
+        {
+            "form": form,
+            "formset": formset,
+            "products": list(products),  # json_script handle karega
+        },
+    )
 # ----------------------
 # Preview Invoice
 # ----------------------
@@ -197,4 +226,4 @@ def login_view(request):
 @login_required
 def logout_view(request):
     logout(request)
-    return redirect("login")
+    return redirect("accounts:login")

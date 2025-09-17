@@ -21,9 +21,11 @@ from django.conf.urls.static import static
 from app1 import views
 urlpatterns = [
     path("admin/", admin.site.urls),
-    # path('', views.home, name='home')
+    path("", views.root_redirect),
     path("invoices/", include("app1.urls",namespace="invoices")),
-    path("accounts/", include("app1.urls",namespace="accounts")),  # login/logout
+    path("accounts/", include("app1.urls_auth",namespace="accounts")),  # login/logout
+    path("users/", include("app1.urls_users", namespace="users")),
+
 
 ]
 

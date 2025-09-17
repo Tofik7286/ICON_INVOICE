@@ -1,13 +1,22 @@
 {% extends "invoices/base.html" %}
-
+{% load static %}
 {% block title %}New Invoice{% endblock %}
 
 {% block content %}
+<style>
+  input[readonly] {
+    background-color: #f8f9fa;
+    cursor: not-allowed;
+    font-weight: bold;
+  }
+</style>
+
 <div class="card p-4">
   <h3 class="mb-4">🧾 Create New Invoice</h3>
   <form method="post">
     {% csrf_token %}
 
+    <!-- Invoice Header -->
     <div class="row mb-3">
       <div class="col-md-3">
         <label class="form-label">Date</label>
@@ -29,9 +38,9 @@
         {{ form.overall_discount_percent }}
       </div>
       <div class="col-md-3">
-        <label class="form-check-label">{{ form.apply_gst }} Apply GST?</label>
+        {{ form.apply_gst }} <label class="form-check-label ms-2">Apply GST?</label>
       </div>
-      <div class="col-md-3">
+      <div class="col-md-3" id="tax-slab-field">
         <label class="form-label">Tax Slab</label>
         {{ form.tax }}
       </div>
@@ -39,36 +48,225 @@
 
     <hr>
     <h5>📦 Items</h5>
-    <table class="table table-bordered align-middle text-center">
-      <thead class="table-light">
-        <tr>
-          <th>Product</th>
-          <th>HSN/SAC</th>
-          <th>Qty</th>
-          <th>Unit</th>
-          <th>Rate</th>
-          <th>Discount %</th>
-          <th>Remove</th>
-        </tr>
-      </thead>
-      <tbody id="item-rows">
-        {{ formset.management_form }}
-        {% for form in formset %}
-        <tr>
-          <td>{{ form.product }}</td>
-          <td>{{ form.hsn_sac }}</td>
-          <td>{{ form.quantity }}</td>
-          <td>{{ form.unit }}</td>
-          <td>{{ form.rate }}</td>
-          <td>{{ form.discount_percent }}</td>
-          <td>{{ form.DELETE }}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
 
-    <button type="submit" class="btn btn-primary">💾 Save & Preview</button>
-    <a href="{% url 'invoices:list' %}" class="btn btn-secondary">Cancel</a>
+    <!-- ✅ Desktop Layout -->
+    <div class="d-none d-md-block">
+      <table class="table table-bordered align-middle text-center">
+        <thead class="table-light">
+          <tr>
+            <th>Product</th>
+            <th>HSN/SAC</th>
+            <th>Qty</th>
+            <th>Unit</th>
+            <th>Rate</th>
+            <th>Discount %</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="item-rows-desktop">
+          {{ formset.management_form }}
+          {% for form in formset.forms %}
+          <tr>
+            <td>{{ form.product }}</td>
+            <td>{{ form.hsn_sac }}</td>
+            <td>{{ form.quantity }}</td>
+            <td>{{ form.unit }}</td>
+            <td>{{ form.rate }}</td>
+            <td>{{ form.discount_percent }}</td>
+            <td>
+              <span style="display:none;">{{ form.DELETE }}</span>
+              <button type="button" class="btn btn-sm btn-outline-danger delete-row">🗑</button>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ✅ Mobile Layout -->
+    <div class="d-md-none" id="item-rows-mobile">
+      {{ formset.management_form }}
+      {% for form in formset.forms %}
+      <div class="border rounded p-3 mb-3 item-card">
+        <div class="mb-2">
+          <label class="form-label">Product</label>
+          {{ form.product }}
+        </div>
+        <div class="mb-2">
+          <label class="form-label">HSN/SAC</label>
+          {{ form.hsn_sac }}
+        </div>
+        <div class="row g-2">
+          <div class="col-6">
+            <label class="form-label">Qty</label>
+            {{ form.quantity }}
+          </div>
+          <div class="col-6">
+            <label class="form-label">Unit</label>
+            {{ form.unit }}
+          </div>
+        </div>
+        <div class="row g-2 mt-2">
+          <div class="col-6">
+            <label class="form-label">Rate</label>
+            {{ form.rate }}
+          </div>
+          <div class="col-6">
+            <label class="form-label">Discount %</label>
+            {{ form.discount_percent }}
+          </div>
+        </div>
+        <div class="text-end mt-2">
+          <span style="display:none;">{{ form.DELETE }}</span>
+          <button type="button" class="btn btn-sm btn-outline-danger delete-row">🗑 Remove</button>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- ✅ Hidden Prototypes -->
+    <div style="display:none;">
+      <table>
+        <tbody>
+          <tr id="empty-form-row-desktop">
+            <td>{{ formset.empty_form.product }}</td>
+            <td>{{ formset.empty_form.hsn_sac }}</td>
+            <td>{{ formset.empty_form.quantity }}</td>
+            <td>{{ formset.empty_form.unit }}</td>
+            <td>{{ formset.empty_form.rate }}</td>
+            <td>{{ formset.empty_form.discount_percent }}</td>
+            <td>
+              <span style="display:none;">{{ formset.empty_form.DELETE }}</span>
+              <button type="button" class="btn btn-sm btn-outline-danger delete-row">🗑</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div style="display:none;">
+      <div id="empty-form-row-mobile" class="border rounded p-3 mb-3 item-card">
+        <div class="mb-2">
+          <label class="form-label">Product</label>
+          {{ formset.empty_form.product }}
+        </div>
+        <div class="mb-2">
+          <label class="form-label">HSN/SAC</label>
+          {{ formset.empty_form.hsn_sac }}
+        </div>
+        <div class="row g-2">
+          <div class="col-6">
+            <label class="form-label">Qty</label>
+            {{ formset.empty_form.quantity }}
+          </div>
+          <div class="col-6">
+            <label class="form-label">Unit</label>
+            {{ formset.empty_form.unit }}
+          </div>
+        </div>
+        <div class="row g-2 mt-2">
+          <div class="col-6">
+            <label class="form-label">Rate</label>
+            {{ formset.empty_form.rate }}
+          </div>
+          <div class="col-6">
+            <label class="form-label">Discount %</label>
+            {{ formset.empty_form.discount_percent }}
+          </div>
+        </div>
+        <div class="text-end mt-2">
+          <span style="display:none;">{{ formset.empty_form.DELETE }}</span>
+          <button type="button" class="btn btn-sm btn-outline-danger delete-row">🗑 Remove</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Buttons -->
+    <div class="d-flex flex-wrap gap-2 mb-3">
+      <button type="button" id="add-item" class="btn btn-outline-primary">➕ Add Item</button>
+      <button type="submit" class="btn btn-primary">💾 Save & Preview</button>
+      <a href="{% url 'invoices:list' %}" class="btn btn-secondary">Cancel</a>
+    </div>
+
+    {{ products|json_script:"product-data" }}
   </form>
 </div>
+
+<!-- JS -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+  (function(){
+    const totalFormsInput = document.querySelector('input[name$="-TOTAL_FORMS"]');
+    if(!totalFormsInput) return;
+
+    const desktopBody = document.getElementById('item-rows-desktop');
+    const mobileBody = document.getElementById('item-rows-mobile');
+    const desktopProto = document.getElementById('empty-form-row-desktop');
+    const mobileProto = document.getElementById('empty-form-row-mobile');
+
+    // Add Item
+    document.getElementById('add-item').addEventListener('click', function(){
+      const currentIndex = parseInt(totalFormsInput.value, 10);
+
+      if(window.innerWidth >= 768) {
+        let tr = document.createElement('tr');
+        tr.innerHTML = desktopProto.innerHTML.replace(/__prefix__/g, currentIndex);
+        desktopBody.appendChild(tr);
+      } else {
+        let div = document.createElement('div');
+        div.className = "border rounded p-3 mb-3 item-card";
+        div.innerHTML = mobileProto.innerHTML.replace(/__prefix__/g, currentIndex);
+        mobileBody.appendChild(div);
+      }
+
+      totalFormsInput.value = currentIndex + 1;
+    });
+
+    // Delete Item
+    document.addEventListener('click', function(e){
+      if(e.target.closest(".delete-row")){
+        const wrapper = e.target.closest("tr, .item-card");
+        if(wrapper){
+          const deleteInput = wrapper.querySelector("input[type='checkbox'][name$='-DELETE']");
+          if(deleteInput){
+            deleteInput.checked = true;
+            wrapper.style.display = "none";
+          } else {
+            wrapper.remove();
+            totalFormsInput.value = parseInt(totalFormsInput.value, 10) - 1;
+          }
+        }
+      }
+    });
+  })();
+
+  // Auto-fill HSN + Rate + Unit
+  document.addEventListener('change', function(e) {
+    if (e.target.matches("select[name$='-product']")) {
+      const container = e.target.closest("tr, .item-card");
+      const productId = e.target.value;
+      const product = JSON.parse(document.getElementById('product-data').textContent).find(p => p.id == productId);
+      if (product && container) {
+        const hsn = container.querySelector("input[name$='-hsn_sac']");
+        const rate = container.querySelector("input[name$='-rate']");
+        const unit = container.querySelector("select[name$='-unit']");
+        if (hsn) hsn.value = product.hsn_sac || '';
+        if (rate) rate.value = product.rate || '';
+        if (unit && product.default_unit__id) unit.value = product.default_unit__id;
+      }
+    }
+  });
+
+  // GST toggle
+  function toggleTaxSlab() {
+    const applyGST = document.getElementById("id_apply_gst");
+    const taxSlabField = document.getElementById("tax-slab-field");
+    if (applyGST && taxSlabField) {
+      taxSlabField.style.display = applyGST.checked ? "block" : "none";
+    }
+  }
+  document.addEventListener("DOMContentLoaded", toggleTaxSlab);
+  document.getElementById("id_apply_gst").addEventListener("change", toggleTaxSlab);
+</script>
+
 {% endblock %}

@@ -18,34 +18,44 @@
 <body>
   <nav class="navbar navbar-expand-lg">
     <div class="container">
-      <ul class="navbar-nav ms-auto">
-  <li class="nav-item">
-    <a class="nav-link" href="{% url 'invoices:create' %}">➕ New Invoice</a>
-  </li>
-  <li class="nav-item">
-    <a class="nav-link" href="{% url 'invoices:list' %}">📑 All Invoices</a>
-  </li>
-  {% if user.is_staff %}
-  <li class="nav-item">
-    <span class="nav-link text-warning">👑 Admin</span>
-  </li>
-  {% endif %}
-  <li class="nav-item"><a class="nav-link" href="{% url 'logout' %}">🚪 Logout</a></li>
-</ul>
+      <!-- Brand -->
+      <a class="navbar-brand fw-bold" href="{% url 'invoices:list' %}">
+        Perfume Wholesale Billing
+      </a>
 
-      <a class="navbar-brand fw-bold" href="{% url 'invoices:list' %}">Perfume Wholesale Billing</a>
-      <ul class="navbar-nav ms-auto">
-        <li class="nav-item"><a class="nav-link" href="{% url 'invoices:create' %}">➕ New Invoice</a></li>
-        <li class="nav-item"><a class="nav-link" href="{% url 'invoices:list' %}">📑 All Invoices</a></li>
-        <li class="nav-item"><a class="nav-link" href="{% url 'logout' %}">🚪 Logout</a></li>
-      </ul>
+      <!-- Mobile toggle button -->
+      <button class="navbar-toggler text-white" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+
+      <!-- Navbar links -->
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav ms-auto">
+          <li class="nav-item">
+            <a class="nav-link" href="{% url 'invoices:create' %}">➕ New Invoice</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="{% url 'invoices:list' %}">📑 All Invoices</a>
+          </li>
+          {% if user.is_staff %}
+          <li class="nav-item">
+            <span class="nav-link text-warning">👑 Admin</span>
+          </li>
+          {% endif %}
+          <li class="nav-item">
+            <a class="nav-link" href="{% url 'accounts:logout' %}">🚪 Logout</a>
+          </li>
+        </ul>
+      </div>
     </div>
   </nav>
 
+  <!-- Main Content -->
   <div class="container my-4">
     {% block content %}{% endblock %}
   </div>
 
+  <!-- Footer -->
   <footer>© {{ now|date:"Y" }} Perfume Wholesale Billing</footer>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>

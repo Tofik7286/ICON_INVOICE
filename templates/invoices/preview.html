@@ -6,44 +6,67 @@
 <div class="card p-4">
   <h3 class="mb-4">🔍 Preview Invoice {{ invoice.invoice_number }}</h3>
 
+  <!-- Parties Info -->
   <div class="row">
-    <div class="col-md-6">
+    <div class="col-md-6 mb-3">
       <h5>From:</h5>
-      <p>{{ invoice.from_party.name }}<br>{{ invoice.from_party.address_line1 }}<br>{{ invoice.from_party.city }} - {{ invoice.from_party.pincode }}<br>GST: {{ invoice.from_party.gstin }}</p>
+      <p>
+        <strong>{{ invoice.from_party.name }}</strong><br>
+        {{ invoice.from_party.address_line1 }}<br>
+        {{ invoice.from_party.city }} - {{ invoice.from_party.pincode }}<br>
+        GST: {{ invoice.from_party.gstin }}
+      </p>
     </div>
-    <div class="col-md-6">
+    <div class="col-md-6 mb-3">
       <h5>To:</h5>
-      <p>{{ invoice.to_party.name }}<br>{{ invoice.to_party.address_line1 }}<br>{{ invoice.to_party.city }} - {{ invoice.to_party.pincode }}<br>GST: {{ invoice.to_party.gstin }}</p>
+      <p>
+        <strong>{{ invoice.to_party.name }}</strong><br>
+        {{ invoice.to_party.address_line1 }}<br>
+        {{ invoice.to_party.city }} - {{ invoice.to_party.pincode }}<br>
+        GST: {{ invoice.to_party.gstin }}
+      </p>
     </div>
   </div>
 
-  <table class="table table-bordered text-center mt-3">
-    <thead class="table-light">
-      <tr>
-        <th>#</th>
-        <th>Description</th>
-        <th>HSN/SAC</th>
-        <th>Qty</th>
-        <th>Unit</th>
-        <th>Rate</th>
-        <th>Amount</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for item in invoice.items.all %}
-      <tr>
-        <td>{{ forloop.counter }}</td>
-        {% comment %} <td>{{ item.product.name if item.product else item.description }}</td> {% endcomment %}
-        <td>{{ item.hsn_sac }}</td>
-        <td>{{ item.quantity }}</td>
-        <td>{{ item.unit.label }}</td>
-        <td>{{ item.rate }}</td>
-        <td>{{ item.line_taxable_amount }}</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+  <!-- Items Table -->
+  <div class="table-responsive">
+    <table class="table table-bordered text-center mt-3">
+      <thead class="table-light">
+        <tr>
+          <th>#</th>
+          <th>Description</th>
+          <th>HSN/SAC</th>
+          <th>Qty</th>
+          <th>Unit</th>
+          <th>Rate</th>
+          <th>Amount</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in invoice.items.all %}
+        <tr>
+          <td>{{ forloop.counter }}</td>
+          <td>
+            {% if item.product %}
+              {{ item.product.name }}
+            {% else %}
+              {{ item.description }}
+            {% endif %}
+          </td>
+          <td>{{ item.hsn_sac }}</td>
+          <td>{{ item.quantity }}</td>
+          <td>{{ item.unit.label }}</td>
+          <td>{{ item.rate }}</td>
+          <td>{{ item.line_taxable_amount }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="7" class="text-muted">No items found.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 
+  <!-- Totals -->
   <div class="text-end mt-3">
     <p>Subtotal: <strong>{{ invoice.taxable_subtotal }}</strong></p>
     <p>Discount: <strong>-{{ invoice.total_discount_amount }}</strong></p>
@@ -55,12 +78,22 @@
         <p>SGST ({{ invoice.tax.rate_percent|floatformat:0|divisibleby:2 }}%): <strong>{{ invoice.tax_amounts.sgst }}</strong></p>
       {% endif %}
     {% endif %}
-    <h4>Grand Total: ₹{{ invoice.grand_total }}</h4>
+    <h4 class="mt-3">Grand Total: ₹{{ invoice.grand_total }}</h4>
   </div>
 
-  <div class="mt-4 d-flex justify-content-end">
-    <a href="{% url 'invoices:generate_pdf' invoice.pk %}" class="btn btn-success me-2">📄 Generate PDF</a>
-    <a href="{% url 'invoices:list' %}" class="btn btn-secondary">Back</a>
+  <!-- Actions -->
+  <div class="mt-4 d-flex flex-wrap justify-content-end gap-2">
+    <a href="{% url 'invoices:generate_pdf' invoice.pk %}" class="btn btn-success">📄 Generate PDF</a>
+    <a href="{% url 'invoices:list' %}" class="btn btn-secondary">⬅ Back</a>
   </div>
 </div>
+
+<!-- Print Styles -->
+<style>
+  @media print {
+    .btn, nav, footer { display: none !important; }
+    .card { border: none; box-shadow: none; }
+    body { background: white !important; }
+  }
+</style>
 {% endblock %}

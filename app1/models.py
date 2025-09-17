@@ -79,18 +79,6 @@ class Tax(models.Model):
 # ----------------------
 # Products
 # ----------------------
-class Product(models.Model):
-    sku = models.CharField(max_length=50, blank=True)
-    name = models.CharField(max_length=255)
-    pic = models.ImageField(upload_to='products/', blank=True, null=True)
-    rate = models.DecimalField(max_digits=12, decimal_places=2)  # tax-exclusive
-    hsn_sac = models.CharField(max_length=20, default='3306', blank=True)
-    default_tax = models.ForeignKey(Tax, on_delete=models.SET_NULL, null=True, blank=True)
-    default_unit = models.ForeignKey(Unit, on_delete=models.SET_NULL, null=True, blank=True)
-    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
-
-    def __str__(self):
-        return self.name
 
 class CustomUser(AbstractUser):
     """Custom user with mobile field."""
@@ -108,90 +96,116 @@ class InvoiceSequence(models.Model):
     last_number = models.PositiveIntegerField(default=0)
 
 
+from decimal import Decimal, ROUND_HALF_UP
+from django.db import models
+from django.contrib.auth.models import User
+from django.utils import timezone
+
+# ----------------------
+# Product
+# ----------------------
+class Product(models.Model):
+    sku = models.CharField(max_length=50, blank=True)
+    name = models.CharField(max_length=255)
+    pic = models.ImageField(upload_to='products/', blank=True, null=True)
+    rate = models.DecimalField(max_digits=12, decimal_places=2)  # tax-exclusive
+    hsn_sac = models.CharField(max_length=20, default='3306', blank=True)
+    default_tax = models.ForeignKey("Tax", on_delete=models.SET_NULL, null=True, blank=True)
+    default_unit = models.ForeignKey("Unit", on_delete=models.SET_NULL, null=True, blank=True)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+
+
+    def __str__(self):
+        return self.name
+
+
 # ----------------------
 # Invoice
 # ----------------------
 class Invoice(models.Model):
-    created_by = models.ForeignKey(User, on_delete=models.CASCADE)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     invoice_number = models.CharField(max_length=50, unique=True)  # e.g. INV_0001_20250915
     seq_number = models.PositiveIntegerField()
     date = models.DateField(default=timezone.localdate)  # editable
-    from_party = models.ForeignKey(Party, related_name='from_invoices', on_delete=models.PROTECT)
-    to_party = models.ForeignKey(Party, related_name='to_invoices', on_delete=models.PROTECT)
+    from_party = models.ForeignKey("Party", related_name="from_invoices", on_delete=models.PROTECT)
+    to_party = models.ForeignKey("Party", related_name="to_invoices", on_delete=models.PROTECT)
     overall_discount_percent = models.DecimalField(max_digits=5, decimal_places=2, default=0)
     apply_gst = models.BooleanField(default=False)
-    tax = models.ForeignKey(Tax, on_delete=models.SET_NULL, null=True, blank=True)
+    tax = models.ForeignKey("Tax", on_delete=models.SET_NULL, null=True, blank=True)
     is_igst = models.BooleanField(default=False)
-    pdf_file = models.FileField(upload_to='invoices/', null=True, blank=True)
+    pdf_file = models.FileField(upload_to="invoices/", null=True, blank=True)
     is_deleted = models.BooleanField(default=False)
     version = models.PositiveIntegerField(default=1)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        ordering = ['-date', '-seq_number']
+        ordering = ["-date", "-seq_number"]
 
     def __str__(self):
         return self.invoice_number
 
     # Totals
     def taxable_subtotal(self):
-        return sum((item.line_taxable_amount() for item in self.items.all()), Decimal('0.00'))
+        return sum((item.line_taxable_amount() for item in self.items.all()), Decimal("0.00"))
 
     def total_discount_amount(self):
         subtotal = self.taxable_subtotal()
         if self.overall_discount_percent:
-            return (subtotal * self.overall_discount_percent / 100).quantize(Decimal('0.01'), ROUND_HALF_UP)
-        return Decimal('0.00')
+            return (subtotal * self.overall_discount_percent / 100).quantize(Decimal("0.01"), ROUND_HALF_UP)
+        return Decimal("0.00")
 
     def tax_amounts(self):
         subtotal = self.taxable_subtotal() - self.total_discount_amount()
         if not self.apply_gst or not self.tax:
-            return {'cgst': Decimal('0.00'), 'sgst': Decimal('0.00'), 'igst': Decimal('0.00')}
+            return {"cgst": Decimal("0.00"), "sgst": Decimal("0.00"), "igst": Decimal("0.00")}
         rate = self.tax.rate_percent
         if self.is_igst:
-            igst = (subtotal * rate / 100).quantize(Decimal('0.01'), ROUND_HALF_UP)
-            return {'igst': igst, 'cgst': Decimal('0.00'), 'sgst': Decimal('0.00')}
+            igst = (subtotal * rate / 100).quantize(Decimal("0.01"), ROUND_HALF_UP)
+            return {"igst": igst, "cgst": Decimal("0.00"), "sgst": Decimal("0.00")}
         half = rate / 2
-        cgst = (subtotal * half / 100).quantize(Decimal('0.01'), ROUND_HALF_UP)
-        return {'igst': Decimal('0.00'), 'cgst': cgst, 'sgst': cgst}
+        cgst = (subtotal * half / 100).quantize(Decimal("0.01"), ROUND_HALF_UP)
+        return {"igst": Decimal("0.00"), "cgst": cgst, "sgst": cgst}
 
     def grand_total(self):
         subtotal = self.taxable_subtotal() - self.total_discount_amount()
         taxes = self.tax_amounts()
-        total = subtotal + taxes['cgst'] + taxes['sgst'] + taxes['igst']
-        return total.quantize(Decimal('0.01'), ROUND_HALF_UP)
+        total = subtotal + taxes["cgst"] + taxes["sgst"] + taxes["igst"]
+        return total.quantize(Decimal("0.01"), ROUND_HALF_UP)
 
 
 # ----------------------
 # Invoice Items
 # ----------------------
 class InvoiceItem(models.Model):
-    invoice = models.ForeignKey(Invoice, related_name='items', on_delete=models.CASCADE)
+    invoice = models.ForeignKey(Invoice, related_name="items", on_delete=models.CASCADE)
     product = models.ForeignKey(Product, on_delete=models.PROTECT, null=True, blank=True)
     description = models.CharField(max_length=400, blank=True)
     hsn_sac = models.CharField(max_length=20, blank=True)
-    unit = models.ForeignKey(Unit, on_delete=models.PROTECT)
+    unit = models.ForeignKey("Unit", on_delete=models.PROTECT)
     quantity = models.DecimalField(max_digits=12, decimal_places=3)
     rate = models.DecimalField(max_digits=12, decimal_places=2)  # tax-exclusive
     discount_percent = models.DecimalField(max_digits=5, decimal_places=2, default=0)
 
     def line_amount(self):
-        return (self.rate * self.quantity).quantize(Decimal('0.01'), ROUND_HALF_UP)
+        return (self.rate * self.quantity).quantize(Decimal("0.01"), ROUND_HALF_UP)
 
     def line_discount_amount(self):
-        return (self.line_amount() * self.discount_percent / 100).quantize(Decimal('0.01'), ROUND_HALF_UP)
+        return (self.line_amount() * self.discount_percent / 100).quantize(Decimal("0.01"), ROUND_HALF_UP)
 
     def line_taxable_amount(self):
         return self.line_amount() - self.line_discount_amount()
 
+    def __str__(self):
+        return f"{self.product} ({self.quantity} x {self.rate})"
 
 # ----------------------
 # Audit log
 # ----------------------
 class InvoiceAudit(models.Model):
     invoice = models.ForeignKey(Invoice, related_name='audits', on_delete=models.CASCADE)
-    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+
     action = models.CharField(max_length=50)  # created/updated/deleted/pdf_generated
     timestamp = models.DateTimeField(auto_now_add=True)
     note = models.TextField(blank=True)

@@ -6,6 +6,14 @@ from .models import Invoice, InvoiceItem, Party, Product, Unit, Tax
 # ----------------------
 # Invoice Form
 # ----------------------
+from django import forms
+from django.forms import inlineformset_factory
+from .models import Invoice, InvoiceItem
+
+
+# ----------------------
+# Invoice Form
+# ----------------------
 class InvoiceForm(forms.ModelForm):
     class Meta:
         model = Invoice
@@ -52,6 +60,12 @@ class InvoiceItemForm(forms.ModelForm):
             "discount_percent": forms.NumberInput(attrs={"class": "form-control", "step": "0.01"}),
         }
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # HSN & Rate readonly (autofilled via JS)
+        self.fields["hsn_sac"].widget.attrs["readonly"] = True
+        self.fields["rate"].widget.attrs["readonly"] = True
+
 
 # ----------------------
 # Invoice Item Formset
@@ -60,8 +74,8 @@ InvoiceItemFormSet = inlineformset_factory(
     Invoice,
     InvoiceItem,
     form=InvoiceItemForm,
-    extra=1,        # by default ek empty row dikhayega
-    can_delete=True # allow user to remove rows
+    extra=1,
+    can_delete=True
 )
 
 from django import forms
