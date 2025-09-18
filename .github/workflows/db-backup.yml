@@ -21,6 +21,8 @@ jobs:
           wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
           sudo apt-get update
           sudo apt-get install -y postgresql-client-17
+          # 👉 set PATH so pg_dump/psql use version 17
+          echo "/usr/lib/postgresql/17/bin" >> $GITHUB_PATH
 
       - name: Create DB dump (compressed custom format)
         env:
@@ -33,8 +35,6 @@ jobs:
           echo "Dumping database to $filename ..."
           pg_dump -Fc "$DATABASE_URL" -f "$filename"
           ls -lh "$filename"
-
-
 
       - name: Upload backup as Actions artifact
         uses: actions/upload-artifact@v4
