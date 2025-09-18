@@ -21,7 +21,7 @@ jobs:
       - name: Create DB dump (compressed custom format)
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          PGSSLMODE: require     # ensures SSL when connecting to Render Postgres
+          PGSSLMODE: require   # force SSL (Render Postgres needs it)
         run: |
           set -e
           timestamp=$(date -u +'%Y%m%dT%H%M%SZ')
@@ -29,6 +29,7 @@ jobs:
           echo "Dumping database to $filename ..."
           pg_dump -Fc "$DATABASE_URL" -f "$filename"
           ls -lh "$filename"
+
 
       - name: Upload backup as Actions artifact
         uses: actions/upload-artifact@v4
