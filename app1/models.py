@@ -83,7 +83,8 @@ class Tax(models.Model):
 
 class CustomUser(AbstractUser):
     """Custom user with mobile field."""
-    mobile = models.CharField(max_length=15, unique=True)
+    mobile = models.CharField(max_length=15, unique=True, null=True, blank=True)
+
 
     def __str__(self):
         return self.username

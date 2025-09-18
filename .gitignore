@@ -207,11 +207,6 @@ marimo/_lsp/
 __marimo__/
 
 
-# Django Migrations
-**/migrations/*.py
-**/migrations/*.pyc
-!**/migrations/__init__.py
-
 # Virtual environment folders (additional just in case)
 venv/
 ENV/
