@@ -1,0 +1,38 @@
+name: Daily Postgres Backup (Render)
+
+on:
+  schedule:
+    # Run daily at 02:00 UTC — change cron as needed
+    - cron: '0 2 * * *'
+  workflow_dispatch: {}  # allows manual trigger
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: Create DB dump (compressed custom format)
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          PGSSLMODE: require     # ensures SSL when connecting to Render Postgres
+        run: |
+          set -e
+          timestamp=$(date -u +'%Y%m%dT%H%M%SZ')
+          filename="db-backup-${timestamp}.dump"
+          echo "Dumping database to $filename ..."
+          pg_dump -Fc "$DATABASE_URL" -f "$filename"
+          ls -lh "$filename"
+
+      - name: Upload backup as Actions artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: postgres-backup-${{ github.run_id }}-${{ github.run_number }}
+          path: db-backup-*.dump
+          retention-days: 90
