@@ -11,7 +11,8 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
-
+import os
+import dj_database_url
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -25,7 +26,7 @@ SECRET_KEY = 'django-insecure-i*n$17a__r$gl*uj_9$^xa!(-zq&cjvi%$q8jdow(etj!pvnv7
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["*"]
 
 
 # Application definition
@@ -81,16 +82,21 @@ WSGI_APPLICATION = 'icon_invoice.wsgi.application'
 #     }
 # }
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'invoices_db',
-        'USER': 'postgres',
-        'PASSWORD': 'Shaikh786@',
-        'HOST': 'localhost',
-        'PORT': '5432',
+if os.environ.get("RENDER"):   # Render pe chalega
+    DATABASES = {
+        'default': dj_database_url.config(default=os.environ.get("DATABASE_URL"))
     }
-}
+else:   # Local development
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': 'invoices_db',
+            'USER': 'postgres',
+            'PASSWORD': 'Shaikh786@',
+            'HOST': 'localhost',
+            'PORT': '5432',
+        }
+    }
 
 
 # Password validation
