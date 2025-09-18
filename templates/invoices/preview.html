@@ -1,4 +1,5 @@
 {% extends "invoices/base.html" %}
+{% load number_words %}
 
 {% block title %}Preview Invoice{% endblock %}
 
@@ -39,28 +40,41 @@
           <th>Qty</th>
           <th>Unit</th>
           <th>Rate</th>
+          {% if invoice.items.all|any_item_has_discount %}
+            <th>Discount %</th>
+            <th>Discount Amt</th>
+          {% endif %}
           <th>Amount</th>
         </tr>
       </thead>
       <tbody>
         {% for item in invoice.items.all %}
-        <tr>
-          <td>{{ forloop.counter }}</td>
-          <td>
-            {% if item.product %}
-              {{ item.product.name }}
-            {% else %}
-              {{ item.description }}
+          <tr>
+            <td>{{ forloop.counter }}</td>
+            <td>
+              {# Show both product and description if both exist #}
+              {% if item.product and item.description %}
+                {{ item.product.name }} — {{ item.description }}
+              {% elif item.product %}
+                {{ item.product.name }}
+              {% elif item.description %}
+                {{ item.description }}
+              {% else %}
+                —
+              {% endif %}
+            </td>
+            <td>{{ item.hsn_sac }}</td>
+            <td>{{ item.quantity }}</td>
+            <td>{{ item.unit.label }}</td>
+            <td>{{ item.rate }}</td>
+            {% if invoice.items.all|any_item_has_discount %}
+              <td>{% if item.discount_percent|floatformat != '0.00' %}{{ item.discount_percent }}%{% else %}0%{% endif %}</td>
+              <td>{% if item.discount_percent|floatformat != '0.00' %}{{ item.line_discount_amount }}{% else %}0.00{% endif %}</td>
             {% endif %}
-          </td>
-          <td>{{ item.hsn_sac }}</td>
-          <td>{{ item.quantity }}</td>
-          <td>{{ item.unit.label }}</td>
-          <td>{{ item.rate }}</td>
-          <td>{{ item.line_taxable_amount }}</td>
-        </tr>
+            <td>{{ item.line_taxable_amount }}</td>
+          </tr>
         {% empty %}
-        <tr><td colspan="7" class="text-muted">No items found.</td></tr>
+          <tr><td colspan="9" class="text-muted">No items found.</td></tr>
         {% endfor %}
       </tbody>
     </table>
@@ -69,7 +83,9 @@
   <!-- Totals -->
   <div class="text-end mt-3">
     <p>Subtotal: <strong>{{ invoice.taxable_subtotal }}</strong></p>
-    <p>Discount: <strong>-{{ invoice.total_discount_amount }}</strong></p>
+    {% if invoice.overall_discount_percent and invoice.overall_discount_percent|floatformat != '0.00' %}
+      <p>Discount: <strong>-{{ invoice.total_discount_amount }}</strong></p>
+    {% endif %}
     {% if invoice.apply_gst %}
       {% if invoice.is_igst %}
         <p>IGST ({{ invoice.tax.rate_percent }}%): <strong>{{ invoice.tax_amounts.igst }}</strong></p>

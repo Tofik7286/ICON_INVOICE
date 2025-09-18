@@ -13,8 +13,33 @@
 
 <div class="card p-4">
   <h3 class="mb-4">🧾 Create New Invoice</h3>
-  <form method="post">
+  <form method="post" id="invoice-form">
     {% csrf_token %}
+
+    {# Show form errors #}
+    {% if form.non_field_errors %}
+      <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+    {% endif %}
+    {% for field in form %}
+      {% for error in field.errors %}
+        <div class="alert alert-danger">{{ field.label }}: {{ error }}</div>
+      {% endfor %}
+    {% endfor %}
+    {# Show formset non-form errors #}
+    {% if formset.non_form_errors %}
+      <div class="alert alert-danger">{{ formset.non_form_errors }}</div>
+    {% endif %}
+    {# Show formset form errors #}
+    {% for f in formset.forms %}
+      {% for error in f.non_field_errors %}
+        <div class="alert alert-danger">Item: {{ error }}</div>
+      {% endfor %}
+      {% for field in f %}
+        {% for error in field.errors %}
+          <div class="alert alert-danger">Item {{ forloop.parentloop.counter }} - {{ field.label }}: {{ error }}</div>
+        {% endfor %}
+      {% endfor %}
+    {% endfor %}
 
     <!-- Invoice Header -->
     <div class="row mb-3">
@@ -210,12 +235,12 @@
 
       if(window.innerWidth >= 768) {
         let tr = document.createElement('tr');
-        tr.innerHTML = desktopProto.innerHTML.replace(/__prefix__/g, currentIndex);
+        tr.innerHTML = desktopProto.innerHTML.replace(/items-__prefix__/g, "items-" + currentIndex);
         desktopBody.appendChild(tr);
       } else {
         let div = document.createElement('div');
         div.className = "border rounded p-3 mb-3 item-card";
-        div.innerHTML = mobileProto.innerHTML.replace(/__prefix__/g, currentIndex);
+        div.innerHTML = mobileProto.innerHTML.replace(/items-__prefix__/g, "items-" + currentIndex);
         mobileBody.appendChild(div);
       }
 
@@ -236,6 +261,19 @@
             totalFormsInput.value = parseInt(totalFormsInput.value, 10) - 1;
           }
         }
+      }
+    });
+
+    // Remove hidden formset before submit to avoid duplicate POST data
+    document.getElementById('invoice-form').addEventListener('submit', function(e){
+      if(window.innerWidth >= 768) {
+        // Desktop: remove mobile formset
+        const mobile = document.getElementById('item-rows-mobile');
+        if(mobile) mobile.parentNode.removeChild(mobile);
+      } else {
+        // Mobile: remove desktop formset
+        const desktop = document.getElementById('item-rows-desktop');
+        if(desktop) desktop.parentNode.removeChild(desktop);
       }
     });
   })();

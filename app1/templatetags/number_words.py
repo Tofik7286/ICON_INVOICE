@@ -18,3 +18,7 @@ def amount_to_words(value):
     if paise > 0:
         words += f" and {num2words(paise, lang='en_IN').title()} Paise"
     return words + " Only"
+
+@register.filter
+def any_item_has_discount(items):
+    return any(getattr(item, 'discount_percent', 0) and float(item.discount_percent) != 0 for item in items)

@@ -8,6 +8,6 @@ urlpatterns = [
     path("create/", views.invoice_create, name="create"),
     path("<int:pk>/preview/", views.invoice_preview, name="preview"),
     path("<int:pk>/generate-pdf/", views.invoice_generate_pdf, name="generate_pdf"),
-    path("<int:pk>/download/", views.invoice_download, name="download"),
+    # path("<int:pk>/download/", views.invoice_download, name="download"),
     path("<int:pk>/delete/", views.invoice_delete, name="delete"),
 ]

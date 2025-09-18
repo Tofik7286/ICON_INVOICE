@@ -1,98 +1,196 @@
+{% load number_words %}
+{% load invoice_extras %}
 <!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
   <style>
-    @page { size: A4; margin: 20mm; }
-    body { font-family: Arial, sans-serif; font-size: 12px; }
-    h3 { text-align: center; margin-bottom: 10px; }
-    table { width: 100%; border-collapse: collapse; }
+    @page { size: A4; margin: 12mm; }
+    body { font-family: Arial, sans-serif; font-size: 12px; line-height: 1.4; }
+    h2 { text-align: center; margin: 12px 0; text-transform: uppercase; }
+    
+    table { width: 100%; border-collapse: collapse; margin: 10px 0; }
     table, th, td { border: 1px solid #444; }
-    th, td { padding: 6px; }
-    .no-border { border: none; }
+    th, td { padding: 8px 6px; vertical-align: top; }
+    
+    .no-border { border: none !important; }
     .right { text-align: right; }
-    .signature { margin-top: 40px; text-align: right; }
+    .center { text-align: center; }
+    .bold { font-weight: bold; }
+    .small { font-size: 11px; }
+    .declaration { font-size: 11px; margin-top: 15px; }
+    .footer { text-align: center; font-size: 11px; margin-top: 12px; }
   </style>
 </head>
 <body>
-  {% load number_words %}
+  <div style="border-top: 4px solid #222; width: 100%; margin-bottom: 6px;"></div>
+  <h2>Tax Invoice</h2>
 
-  <h3>TAX INVOICE</h3>
-
-  <table class="no-border">
-    <tr>
-      <td width="50%">
-        <strong>From:</strong><br>
-        {{ invoice.from_party.name }}<br>
-        {{ invoice.from_party.address_line1 }}<br>
-        {{ invoice.from_party.city }} - {{ invoice.from_party.pincode }}<br>
-        GST: {{ invoice.from_party.gstin }}
-      </td>
-      <td width="50%">
-        <strong>To:</strong><br>
-        {{ invoice.to_party.name }}<br>
-        {{ invoice.to_party.address_line1 }}<br>
-        {{ invoice.to_party.city }} - {{ invoice.to_party.pincode }}<br>
-        GST: {{ invoice.to_party.gstin }}
-      </td>
-    </tr>
-  </table>
-
-  <p><strong>Invoice No:</strong> {{ invoice.invoice_number }} | <strong>Date:</strong> {{ invoice.date }}</p>
-
+  <!-- Header -->
   <table>
-    <thead>
-      <tr>
-        <th>#</th>
-        <th>Description</th>
-        <th>HSN</th>
-        <th>Qty</th>
-        <th>Unit</th>
-        <th>Rate</th>
-        <th>Amount</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for item in invoice.items.all %}
-      <tr>
-        <td>{{ forloop.counter }}</td>
-        {% comment %} <td>{{ item.product.name if item.product else item.description }}</td> {% endcomment %}
-        <td>{{ item.hsn_sac }}</td>
-        <td class="right">{{ item.quantity }}</td>
-        <td>{{ item.unit.label }}</td>
-        <td class="right">{{ item.rate }}</td>
-        <td class="right">{{ item.line_taxable_amount }}</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-
-  <table class="no-border" style="margin-top:15px;">
     <tr>
-      <td class="no-border" width="60%"></td>
-      <td class="no-border">
-        <table>
-          <tr><td>Subtotal</td><td class="right">{{ invoice.taxable_subtotal }}</td></tr>
-          <tr><td>Discount</td><td class="right">-{{ invoice.total_discount_amount }}</td></tr>
-          {% if invoice.apply_gst %}
-            {% if invoice.is_igst %}
-              <tr><td>IGST {{ invoice.tax.rate_percent }}%</td><td class="right">{{ invoice.tax_amounts.igst }}</td></tr>
-            {% else %}
-              <tr><td>CGST {{ invoice.tax.rate_percent|floatformat:0|divisibleby:2 }}%</td><td class="right">{{ invoice.tax_amounts.cgst }}</td></tr>
-              <tr><td>SGST {{ invoice.tax.rate_percent|floatformat:0|divisibleby:2 }}%</td><td class="right">{{ invoice.tax_amounts.sgst }}</td></tr>
-            {% endif %}
-          {% endif %}
-          <tr><td><strong>Total</strong></td><td class="right"><strong>{{ invoice.grand_total }}</strong></td></tr>
+      <td style="width:50%; vertical-align:top; border-right:1px solid #444;">
+        <span class="bold">{{ company.name|upper }}</span><br>
+        {{ company.address_line1 }}{% if company.address_line2 %}, {{ company.address_line2 }}{% endif %}<br>
+        {{ company.city }} - {{ company.pincode }}<br>
+        GSTIN/UIN: {{ company.gstin }}<br>
+        State Name : {{ company.state }}, Code : {{ company.state_code }}<br>
+        <span class="small">Phone: {{ company.phone }} | Email: {{ company.email }}</span><br><br>
+        <hr>
+        <span class="bold">Buyer (Bill to)</span><br>
+        {{ invoice.to_party.name }}<br>
+        {{ invoice.to_party.address_line1 }}{% if invoice.to_party.address_line2 %}, {{ invoice.to_party.address_line2 }}{% endif %}<br>
+        {{ invoice.to_party.city }} - {{ invoice.to_party.pincode }}<br>
+        State Name : {{ invoice.to_party.state }}, Code : {{ invoice.to_party.tax_state_code }}<br>
+        GSTIN: {{ invoice.to_party.gstin }}
+      </td>
+
+      <td style="width:50%; vertical-align:top;">
+        <table style="width:100%; border:1px solid black; border-collapse: collapse;">
+          <tr><td><b>Invoice No.</b></td><td>{{ invoice.invoice_number }}</td></tr>
+          <tr><td><b>Dated</b></td><td>{{ invoice.date|date:'d-M-y' }}</td></tr>
+          <tr><td><b>Delivery Note</b></td><td></td></tr>
+          <tr><td><b>Reference No. & Date</b></td><td></td></tr>
+          <tr><td><b>Buyer's Order No.</b></td><td></td></tr>
+          <tr><td><b>Dispatch Doc No.</b></td><td></td></tr>
+          <tr><td><b>Dispatched through</b></td><td></td></tr>
+          <tr><td><b>Destination</b></td><td></td></tr>
+          <tr><td><b>Terms of Delivery</b></td><td></td></tr>
         </table>
       </td>
     </tr>
   </table>
 
-  {% comment %} <p><strong>Amount in Words:</strong> {{ invoice.grand_total|amount_to_words }}</p> {% endcomment %}
+  <!-- Items -->
+  <table>
+  <thead>
+    <tr>
+      <th>Sl No.</th>
+      <th>Description of Goods</th>
+      <th>HSN/SAC</th>
+      <th>Quantity</th>
+      <th>Rate</th>
+      <th>per</th>
+      {% if invoice.items.all|any_item_has_discount %}
+        <th>Disc. %</th>
+      {% endif %}
+      <th>Amount</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for item in invoice.items.all %}
+    <tr>
+      <td class="center">{{ forloop.counter }}</td>
+      <td>
+        {% if item.product and item.description %}
+          {{ item.product.name }} — {{ item.description }}
+        {% elif item.product %}
+          {{ item.product.name }}
+        {% elif item.description %}
+          {{ item.description }}
+        {% else %} — {% endif %}
+      </td>
+      <td class="center">{{ item.hsn_sac }}</td>
+      <td class="center">{{ item.quantity|floatformat:0 }} {{ item.unit.label }}</td>
+      <td class="right">{{ item.rate }}</td>
+      <td class="center">{{ item.unit.label }}</td>
+      {% if invoice.items.all|any_item_has_discount %}
+        <td class="center">
+          {% if item.discount_percent|floatformat != '0.00' %}
+            {{ item.discount_percent }}%
+          {% else %}0%{% endif %}
+        </td>
+      {% endif %}
+      <td class="right">{{ item.line_taxable_amount }}</td>
+    </tr>
+    {% endfor %}
 
-  <div class="signature">
-    For {{ invoice.from_party.name }}<br><br>
+    <!-- ✅ Subtotal Row -->
+    <tr style="border-top:2px solid #444;">
+      <td colspan="3" class="right bold">Total</td>
+      <td class="center bold">
+        {% for unit, qty in invoice.unit_wise_totals.items %}
+          {{ qty|floatformat:0 }} {{ unit }}{% if not forloop.last %}, {% endif %}
+        {% endfor %}
+      </td>
+      <td colspan="3" class="no-border right bold">Subtotal</td>
+      <td class="right bold">{{ invoice.taxable_subtotal }}</td>
+    </tr>
+
+    <!-- ✅ Overall Discount Row (if any) -->
+    {% if invoice.overall_discount_percent and invoice.overall_discount_percent|floatformat != '0.00' %}
+    <tr>
+      <td colspan="7" class="right">Overall Discount ({{ invoice.overall_discount_percent }}%)</td>
+      <td class="right">-{{ invoice.total_discount_amount }}</td>
+    </tr>
+    {% endif %}
+
+    <!-- ✅ Grand Total Row -->
+    <tr style="border-top:2px solid #444;">
+      <td colspan="7" class="right bold">Grand Total</td>
+      <td class="right bold">₹ {{ invoice.grand_total }}</td>
+    </tr>
+  </tbody>
+</table>
+
+
+  <!-- Summary -->
+  <table>
+    <tr>
+      <td class="no-border" width="60%" rowspan="3" style="vertical-align:top;">
+        <b>Amount Chargeable (in words)</b><br>
+        INR {{ invoice.grand_total|amount_to_words|capfirst }}
+      </td>
+      <td>Taxable Value</td>
+      {% if invoice.apply_gst %}
+        {% if invoice.is_igst %}
+          <td>IGST</td>
+        {% else %}
+          <td>CGST</td>
+          <td>SGST</td>
+        {% endif %}
+      {% endif %}
+      <td>Total Tax Amount</td>
+    </tr>
+    <tr>
+      <td>{{ invoice.taxable_subtotal }}</td>
+      {% if invoice.apply_gst %}
+        {% if invoice.is_igst %}
+          <td>{{ invoice.tax_amounts.igst }}</td>
+        {% else %}
+          <td>{{ invoice.tax_amounts.cgst }}</td>
+          <td>{{ invoice.tax_amounts.sgst }}</td>
+        {% endif %}
+      {% endif %}
+      <td>
+        {% if invoice.is_igst %}
+          {{ invoice.tax_amounts.igst }}
+        {% else %}
+          {{ invoice.tax_amounts.cgst|add:invoice.tax_amounts.sgst }}
+        {% endif %}
+      </td>
+    </tr>
+    <tr>
+      <td colspan="10" class="no-border right">
+        <b>Total</b> <span class="bold">₹{{ invoice.grand_total }}</span>
+      </td>
+    </tr>
+  </table>
+
+  <!-- Declaration -->
+  <div class="declaration">
+    <b>Declaration</b><br>
+    We declare that this invoice shows the actual price of the goods described and that all particulars are true and correct.
+  </div>
+
+  <!-- Signature -->
+  <div class="signature" style="margin-top:30px; text-align:right;">
+    for <b>{{ company.name|upper }}</b><br><br>
     Authorised Signatory
+  </div>
+
+  <div class="footer">
+    This is a Computer Generated Invoice
   </div>
 </body>
 </html>

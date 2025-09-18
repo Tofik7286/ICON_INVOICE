@@ -48,6 +48,12 @@ def invoice_create(request):
     if request.method == "POST":
         form = InvoiceForm(request.POST)
         formset = InvoiceItemFormSet(request.POST, prefix="items")  # ✅ prefix added
+        print("[DEBUG] POST data:", request.POST)
+        print("[DEBUG] Form valid:", form.is_valid())
+        print("[DEBUG] Formset valid:", formset.is_valid())
+        if not formset.is_valid():
+            print("[DEBUG] Formset errors:", formset.errors)
+            print("[DEBUG] Formset non-form errors:", formset.non_form_errors())
         if form.is_valid() and formset.is_valid():
             with transaction.atomic():
                 # Sequence locking
@@ -70,6 +76,7 @@ def invoice_create(request):
                 # Link items
                 formset.instance = invoice
                 formset.save()
+                print("[DEBUG] Saved items:", list(invoice.items.all()))
 
                 # Audit log
                 InvoiceAudit.objects.create(
@@ -98,6 +105,7 @@ def invoice_create(request):
             "products": list(products),  # json_script handle karega
         },
     )
+
 # ----------------------
 # Preview Invoice
 # ----------------------
@@ -109,60 +117,47 @@ def invoice_preview(request, pk):
         raise Http404("Not allowed")
 
     company = Company.objects.first()
+    print("[DEBUG] Previewing invoice:", invoice)
+    print("[DEBUG] Items in preview:", list(invoice.items.all()))
     return render(request, "invoices/preview.html", {"invoice": invoice, "company": company})
 
 # ----------------------
 # Generate PDF
 # ----------------------
+from django.conf import settings
+
 @login_required
 def invoice_generate_pdf(request, pk):
     invoice = get_object_or_404(Invoice, pk=pk, is_deleted=False)
+    
     if not (request.user.is_staff or invoice.created_by == request.user):
-        raise Http404
-
-    company = Company.objects.first()
-    html_string = render_to_string("invoices/pdf_template.html", {"invoice": invoice, "company": company})
-
-    html = HTML(string=html_string, base_url=request.build_absolute_uri("/"))
-    pdf_file_name = f"{invoice.invoice_number}_{invoice.pk}.pdf"
-
-    media_dir = os.path.join("media", "invoices")
-    os.makedirs(media_dir, exist_ok=True)
-    pdf_path = os.path.join(media_dir, pdf_file_name)
-
-    html.write_pdf(pdf_path)
-
-    invoice.pdf_file.name = f"invoices/{pdf_file_name}"
-    invoice.version += 1
-    invoice.save()
-
-    InvoiceAudit.objects.create(invoice=invoice, user=request.user, action="pdf_generated",
-                                note=f"PDF generated: {invoice.pdf_file.name}")
-
-    return redirect("invoices:download", pk=invoice.pk)
-
-
-# ----------------------
-# Download PDF
-# ----------------------
-@login_required
-def invoice_download(request, pk):
-    invoice = get_object_or_404(Invoice, pk=pk, is_deleted=False)
-
-    if not request.user.is_staff and invoice.created_by != request.user:
         raise Http404("Not allowed")
 
-    if not invoice.pdf_file:
-        return redirect("invoices:generate_pdf", pk=invoice.pk)
+    company = Company.objects.first()
+    html_string = render_to_string(
+        "invoices/pdf_template.html",
+        {"invoice": invoice, "company": company}
+    )
 
-    file_path = invoice.pdf_file.path
-    if not os.path.exists(file_path):
-        return redirect("invoices:generate_pdf", pk=invoice.pk)
+    # ✅ Generate PDF in-memory (no saving to media folder)
+    html = HTML(string=html_string, base_url=request.build_absolute_uri("/"))
+    pdf_bytes = html.write_pdf()
 
-    with open(file_path, "rb") as f:
-        response = HttpResponse(f.read(), content_type="application/pdf")
-        response["Content-Disposition"] = f'attachment; filename="{os.path.basename(file_path)}"'
-        return response
+    # ✅ Direct download
+    pdf_file_name = f"{invoice.invoice_number}_{invoice.pk}.pdf"
+    response = HttpResponse(pdf_bytes, content_type="application/pdf")
+    response["Content-Disposition"] = f'attachment; filename="{pdf_file_name}"'
+
+    # ✅ Optional: audit log only (no file save)
+    InvoiceAudit.objects.create(
+        invoice=invoice,
+        user=request.user,
+        action="pdf_generated",
+        note=f"PDF generated (not stored on disk)"
+    )
+
+    return response
+
 # ----------------------
 # Invoice List (with search & pagination)
 # ----------------------

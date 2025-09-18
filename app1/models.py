@@ -2,6 +2,7 @@ from django.db import models, transaction
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+from collections import defaultdict
 
 from django.utils import timezone
 from decimal import Decimal, ROUND_HALF_UP
@@ -172,7 +173,14 @@ class Invoice(models.Model):
         taxes = self.tax_amounts()
         total = subtotal + taxes["cgst"] + taxes["sgst"] + taxes["igst"]
         return total.quantize(Decimal("0.01"), ROUND_HALF_UP)
-
+    @property
+    def unit_wise_totals(self):
+        """Return dict {unit_label: total_qty} for all items."""
+        totals = defaultdict(float)
+        for item in self.items.all():
+            if item.unit and item.quantity:
+                totals[item.unit.label] += float(item.quantity)
+        return dict(totals)
 
 # ----------------------
 # Invoice Items
