@@ -220,3 +220,15 @@ venv.bak/
 # IDE configs (for people using PyCharm or VSCode, helpful in Django projects)
 .idea/
 .vscode/
+
+# Local environment and secrets
+.env
+*.pem
+*.key
+*.crt
+
+# Local SQLite database
+db.sqlite3
+
+# Static files collected by Django
+static/staticfiles/
