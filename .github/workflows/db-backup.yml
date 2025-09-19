@@ -1,0 +1,44 @@
+name: Daily Postgres Backup (Render)
+
+on:
+  schedule:
+    # Run daily at 02:00 UTC — change cron as needed
+    - cron: '0 2 * * *'
+  workflow_dispatch: {}  # allows manual trigger
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Install PostgreSQL client 17
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wget ca-certificates
+          sudo sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
+          wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client-17
+          # 👉 set PATH so pg_dump/psql use version 17
+          echo "/usr/lib/postgresql/17/bin" >> $GITHUB_PATH
+
+      - name: Create DB dump (compressed custom format)
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          PGSSLMODE: require
+        run: |
+          set -e
+          timestamp=$(date -u +'%Y%m%dT%H%M%SZ')
+          filename="db-backup-${timestamp}.dump"
+          echo "Dumping database to $filename ..."
+          pg_dump -Fc "$DATABASE_URL" -f "$filename"
+          ls -lh "$filename"
+
+      - name: Upload backup as Actions artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: postgres-backup-${{ github.run_id }}-${{ github.run_number }}
+          path: db-backup-*.dump
+          retention-days: 90
