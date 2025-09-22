@@ -93,7 +93,11 @@ def invoice_create(request):
 
     # ✅ Send product data for JS auto-fill
     products = Product.objects.values(
-        "id", "hsn_sac", "rate", "default_unit__id", "default_unit__label"
+        "id",
+        "hsn_sac",
+        "rate",
+        "default_unit_id",       # 👈 fixed
+        "default_unit__label",
     )
 
     return render(
