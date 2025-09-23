@@ -48,12 +48,12 @@ def invoice_create(request):
     if request.method == "POST":
         form = InvoiceForm(request.POST)
         formset = InvoiceItemFormSet(request.POST, prefix="items")  # ✅ prefix added
-        print("[DEBUG] POST data:", request.POST)
-        print("[DEBUG] Form valid:", form.is_valid())
-        print("[DEBUG] Formset valid:", formset.is_valid())
-        if not formset.is_valid():
-            print("[DEBUG] Formset errors:", formset.errors)
-            print("[DEBUG] Formset non-form errors:", formset.non_form_errors())
+        # print("[DEBUG] POST data:", request.POST)
+        # print("[DEBUG] Form valid:", form.is_valid())
+        # print("[DEBUG] Formset valid:", formset.is_valid())
+        # if not formset.is_valid():
+            # print("[DEBUG] Formset errors:", formset.errors)
+            # print("[DEBUG] Formset non-form errors:", formset.non_form_errors())
         if form.is_valid() and formset.is_valid():
             with transaction.atomic():
                 # Sequence locking
@@ -72,6 +72,14 @@ def invoice_create(request):
                     invoice.is_igst = (invoice.from_party.state != invoice.to_party.state)
 
                 invoice.save()
+                
+                items = formset.save(commit=False)
+                for item in items:
+                    if item.product:
+                        item.rate = item.product.rate  
+                    item.invoice = invoice
+                    item.save()
+                formset.save_m2m()
 
                 # Link items
                 formset.instance = invoice

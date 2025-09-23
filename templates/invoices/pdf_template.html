@@ -92,7 +92,7 @@
       </td>
       <td class="center">{{ item.hsn_sac }}</td>
       <td class="center">{{ item.quantity|floatformat:0 }} {{ item.unit.label }}</td>
-      <td class="right">{{ item.rate }}</td>
+      <td class="right">{{ item.effective_rate }}</td>
       <td class="center">{{ item.unit.label }}</td>
       {% if invoice.items.all|any_item_has_discount %}
         <td class="center">
@@ -105,7 +105,7 @@
     </tr>
     {% endfor %}
 
-    <!-- ✅ Subtotal Row -->
+    <!-- Subtotal Row -->
     <tr style="border-top:2px solid #444;">
       <td colspan="3" class="right bold">Total</td>
       <td class="center bold">
@@ -117,7 +117,7 @@
       <td class="right bold">{{ invoice.taxable_subtotal }}</td>
     </tr>
 
-    <!-- ✅ Overall Discount Row (if any) -->
+    <!-- Overall Discount -->
     {% if invoice.overall_discount_percent and invoice.overall_discount_percent|floatformat != '0.00' %}
     <tr>
       <td colspan="7" class="right">Overall Discount ({{ invoice.overall_discount_percent }}%)</td>
@@ -125,14 +125,13 @@
     </tr>
     {% endif %}
 
-    <!-- ✅ Grand Total Row -->
+    <!-- Grand Total -->
     <tr style="border-top:2px solid #444;">
       <td colspan="7" class="right bold">Grand Total</td>
       <td class="right bold">₹ {{ invoice.grand_total }}</td>
     </tr>
   </tbody>
 </table>
-
 
   <!-- Summary -->
   <table>
