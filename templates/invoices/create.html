@@ -94,7 +94,7 @@
             <td>{{ form.hsn_sac }}</td>
             <td>{{ form.quantity }}</td>
             <td>{{ form.unit }}</td>
-            <td>{{ form.rate }}</td>
+            <td>{{ form.custom_rate }}</td>
             <td>{{ form.discount_percent }}</td>
             <td>
               <span style="display:none;">{{ form.DELETE }}</span>
@@ -131,8 +131,9 @@
         <div class="row g-2 mt-2">
           <div class="col-6">
             <label class="form-label">Rate</label>
-            {{ form.rate }}
+            {{ form.custom_rate }}
           </div>
+
           <div class="col-6">
             <label class="form-label">Discount %</label>
             {{ form.discount_percent }}
@@ -155,7 +156,7 @@
             <td>{{ formset.empty_form.hsn_sac }}</td>
             <td>{{ formset.empty_form.quantity }}</td>
             <td>{{ formset.empty_form.unit }}</td>
-            <td>{{ formset.empty_form.rate }}</td>
+            <td>{{ formset.empty_form.custom_rate }}</td>
             <td>{{ formset.empty_form.discount_percent }}</td>
             <td>
               <span style="display:none;">{{ formset.empty_form.DELETE }}</span>
@@ -281,7 +282,8 @@
       const product = JSON.parse(document.getElementById('product-data').textContent).find(p => p.id == productId);
       if (product && container) {
         const hsn = container.querySelector("input[name$='-hsn_sac']");
-        const rate = container.querySelector("input[name$='-rate']");
+        const rate = container.querySelector("input[name$='-custom_rate']");
+          if (rate) rate.value = product.rate || '';
         const unit = container.querySelector("select[name$='-unit']");
         if (hsn) hsn.value = product.hsn_sac || '';
         if (rate) rate.value = product.rate || '';

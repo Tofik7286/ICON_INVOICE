@@ -185,7 +185,8 @@ class Invoice(models.Model):
 
 # ----------------------
 # Invoice Items
-# ----------------------
+from decimal import Decimal, ROUND_HALF_UP
+
 class InvoiceItem(models.Model):
     invoice = models.ForeignKey(Invoice, related_name="items", on_delete=models.CASCADE)
     product = models.ForeignKey(Product, on_delete=models.PROTECT, null=True, blank=True)
@@ -193,11 +194,17 @@ class InvoiceItem(models.Model):
     hsn_sac = models.CharField(max_length=20, blank=True)
     unit = models.ForeignKey("Unit", on_delete=models.PROTECT)
     quantity = models.DecimalField(max_digits=12, decimal_places=3)
-    rate = models.DecimalField(max_digits=12, decimal_places=2)  # tax-exclusive
+    rate = models.DecimalField(max_digits=12, decimal_places=2)  # original (product rate)
+    custom_rate = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)  # new editable rate
     discount_percent = models.DecimalField(max_digits=5, decimal_places=2, default=0)
 
+    @property
+    def effective_rate(self):
+        """Return custom rate if available, else original rate"""
+        return self.custom_rate if self.custom_rate is not None else self.rate
+
     def line_amount(self):
-        return (self.rate * self.quantity).quantize(Decimal("0.01"), ROUND_HALF_UP)
+        return (self.effective_rate * self.quantity).quantize(Decimal("0.01"), ROUND_HALF_UP)
 
     def line_discount_amount(self):
         return (self.line_amount() * self.discount_percent / 100).quantize(Decimal("0.01"), ROUND_HALF_UP)
@@ -206,7 +213,7 @@ class InvoiceItem(models.Model):
         return self.line_amount() - self.line_discount_amount()
 
     def __str__(self):
-        return f"{self.product} ({self.quantity} x {self.rate})"
+        return f"{self.product} ({self.quantity} x {self.effective_rate})"
 
 # ----------------------
 # Audit log

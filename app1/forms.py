@@ -47,25 +47,24 @@ class InvoiceItemForm(forms.ModelForm):
             "hsn_sac",
             "unit",
             "quantity",
-            "rate",
+            "custom_rate",   # 👈 use this
             "discount_percent",
         ]
         widgets = {
             "product": forms.Select(attrs={"class": "form-select"}),
             "description": forms.TextInput(attrs={"class": "form-control", "placeholder": "Item description"}),
-            "hsn_sac": forms.TextInput(attrs={"class": "form-control"}),
+            "hsn_sac": forms.TextInput(attrs={"class": "form-control", "readonly": "readonly"}),
             "unit": forms.Select(attrs={"class": "form-select"}),
             "quantity": forms.NumberInput(attrs={"class": "form-control", "step": "0.001"}),
-            "rate": forms.NumberInput(attrs={"class": "form-control", "step": "0.01"}),
+            "custom_rate": forms.NumberInput(attrs={"class": "form-control", "step": "0.01"}),
             "discount_percent": forms.NumberInput(attrs={"class": "form-control", "step": "0.01"}),
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # HSN & Rate readonly (autofilled via JS)
-        self.fields["hsn_sac"].widget.attrs["readonly"] = True
-        self.fields["rate"].widget.attrs["readonly"] = True
-
+        # Pre-fill custom_rate with product rate if not set
+        if self.instance and self.instance.rate and not self.instance.custom_rate:
+            self.fields["custom_rate"].initial = self.instance.rate
 
 # ----------------------
 # Invoice Item Formset
