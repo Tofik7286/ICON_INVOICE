@@ -33,49 +33,65 @@
   <div class="table-responsive">
     <table class="table table-bordered text-center mt-3">
       <thead class="table-light">
-        <tr>
-          <th>#</th>
-          <th>Description</th>
-          <th>HSN/SAC</th>
-          <th>Qty</th>
-          <th>Unit</th>
-          <th>Rate</th>
-          {% if invoice.items.all|any_item_has_discount %}
-            <th>Discount %</th>
-            <th>Discount Amt</th>
+  <tr>
+    <th>#</th>
+    <th>Description</th>
+    <th>HSN/SAC</th>
+    <th>Qty</th>
+    <th>Unit</th>
+    <th>Rate</th>
+    <th>Discount %</th>
+    <th>GST %</th>
+    <th>Amount</th>
+  </tr>
+</thead>
+<tbody>
+  {% for item in invoice.items.all %}
+    <tr>
+      <td>{{ forloop.counter }}</td>
+      <td>
+        {% if item.product and item.description %}
+          {{ item.product.name }} — {{ item.description }}
+        {% elif item.product %}
+          {{ item.product.name }}
+        {% elif item.description %}
+          {{ item.description }}
+        {% else %}
+          —
+        {% endif %}
+      </td>
+      <td>{{ item.hsn_sac }}</td>
+      <td>{{ item.quantity }}</td>
+      <td>{{ item.unit.label }}</td>
+      <td>{{ item.effective_rate }}</td>
+
+      <!-- Discount -->
+      <td>
+        {% if item.discount_percent|floatformat != '0.00' %}
+          {{ item.discount_percent }}%
+        {% else %}
+          —
+        {% endif %}
+      </td>
+
+      <!-- GST -->
+        <td class="center">
+          {% if item.gst_percent %}
+            {{ item.gst_percent }}%
+          {% else %}
+            —
           {% endif %}
-          <th>Amount</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for item in invoice.items.all %}
-          <tr>
-            <td>{{ forloop.counter }}</td>
-            <td>
-              {% if item.product and item.description %}
-                {{ item.product.name }} — {{ item.description }}
-              {% elif item.product %}
-                {{ item.product.name }}
-              {% elif item.description %}
-                {{ item.description }}
-              {% else %}
-                —
-              {% endif %}
-            </td>
-            <td>{{ item.hsn_sac }}</td>
-            <td>{{ item.quantity }}</td>
-            <td>{{ item.unit.label }}</td>
-            <td>{{ item.effective_rate }}</td>
-            {% if invoice.items.all|any_item_has_discount %}
-              <td>{% if item.discount_percent|floatformat != '0.00' %}{{ item.discount_percent }}%{% else %}0%{% endif %}</td>
-              <td>{% if item.discount_percent|floatformat != '0.00' %}{{ item.line_discount_amount }}{% else %}0.00{% endif %}</td>
-            {% endif %}
-            <td>{{ item.line_taxable_amount }}</td>
-          </tr>
-        {% empty %}
-          <tr><td colspan="9" class="text-muted">No items found.</td></tr>
-        {% endfor %}
-      </tbody>
+        </td>
+        <td class="right">{{ item.gst_amount }}</td>
+
+
+      <td>{{ item.line_taxable_amount }}</td>
+    </tr>
+  {% empty %}
+    <tr><td colspan="9" class="text-muted">No items found.</td></tr>
+  {% endfor %}
+</tbody>
+
     </table>
   </div>
 

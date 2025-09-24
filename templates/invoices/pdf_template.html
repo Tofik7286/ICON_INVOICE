@@ -63,75 +63,62 @@
 
   <!-- Items -->
   <table>
-  <thead>
-    <tr>
-      <th>Sl No.</th>
-      <th>Description of Goods</th>
-      <th>HSN/SAC</th>
-      <th>Quantity</th>
-      <th>Rate</th>
-      <th>per</th>
-      {% if invoice.items.all|any_item_has_discount %}
-        <th>Disc. %</th>
+<thead>
+  <tr>
+    <th>Sl No.</th>
+    <th>Description of Goods</th>
+    <th>HSN/SAC</th>
+    <th>Quantity</th>
+    <th>Rate</th>
+    <th>per</th>
+    <th>Disc. %</th>
+    <th>GST %</th>
+    <th>Amount</th>
+  </tr>
+</thead>
+<tbody>
+  {% for item in invoice.items.all %}
+  <tr>
+    <td class="center">{{ forloop.counter }}</td>
+    <td>
+      {% if item.product and item.description %}
+        {{ item.product.name }} — {{ item.description }}
+      {% elif item.product %}
+        {{ item.product.name }}
+      {% elif item.description %}
+        {{ item.description }}
+      {% else %} — {% endif %}
+    </td>
+    <td class="center">{{ item.hsn_sac }}</td>
+    <td class="center">{{ item.quantity|floatformat:0 }} {{ item.unit.label }}</td>
+    <td class="right">{{ item.effective_rate }}</td>
+    <td class="center">{{ item.unit.label }}</td>
+
+    <!-- Discount column -->
+    <td class="center">
+      {% if item.discount_percent and item.discount_percent|floatformat != '0.00' %}
+        {{ item.discount_percent }}%
+      {% else %}
+        —
       {% endif %}
-      <th>Amount</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for item in invoice.items.all %}
-    <tr>
-      <td class="center">{{ forloop.counter }}</td>
-      <td>
-        {% if item.product and item.description %}
-          {{ item.product.name }} — {{ item.description }}
-        {% elif item.product %}
-          {{ item.product.name }}
-        {% elif item.description %}
-          {{ item.description }}
-        {% else %} — {% endif %}
-      </td>
-      <td class="center">{{ item.hsn_sac }}</td>
-      <td class="center">{{ item.quantity|floatformat:0 }} {{ item.unit.label }}</td>
-      <td class="right">{{ item.effective_rate }}</td>
-      <td class="center">{{ item.unit.label }}</td>
-      {% if invoice.items.all|any_item_has_discount %}
-        <td class="center">
-          {% if item.discount_percent|floatformat != '0.00' %}
-            {{ item.discount_percent }}%
-          {% else %}0%{% endif %}
-        </td>
+    </td>
+
+    <!-- GST column (item-wise) -->
+    <td class="center">
+      {% if item.gst_percent %}
+        {{ item.gst_percent }}%
+      {% else %}
+        —
       {% endif %}
-      <td class="right">{{ item.line_taxable_amount }}</td>
-    </tr>
-    {% endfor %}
+    </td>
 
-    <!-- Subtotal Row -->
-    <tr style="border-top:2px solid #444;">
-      <td colspan="3" class="right bold">Total</td>
-      <td class="center bold">
-        {% for unit, qty in invoice.unit_wise_totals.items %}
-          {{ qty|floatformat:0 }} {{ unit }}{% if not forloop.last %}, {% endif %}
-        {% endfor %}
-      </td>
-      <td colspan="3" class="no-border right bold">Subtotal</td>
-      <td class="right bold">{{ invoice.taxable_subtotal }}</td>
-    </tr>
+    <td class="right">{{ item.line_taxable_amount }}</td>
+  </tr>
+  {% endfor %}
+</tbody>
 
-    <!-- Overall Discount -->
-    {% if invoice.overall_discount_percent and invoice.overall_discount_percent|floatformat != '0.00' %}
-    <tr>
-      <td colspan="7" class="right">Overall Discount ({{ invoice.overall_discount_percent }}%)</td>
-      <td class="right">-{{ invoice.total_discount_amount }}</td>
-    </tr>
-    {% endif %}
 
-    <!-- Grand Total -->
-    <tr style="border-top:2px solid #444;">
-      <td colspan="7" class="right bold">Grand Total</td>
-      <td class="right bold">₹ {{ invoice.grand_total }}</td>
-    </tr>
-  </tbody>
-</table>
+  </table>
 
   <!-- Summary -->
   <table>
