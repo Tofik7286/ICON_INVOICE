@@ -124,6 +124,15 @@ class Product(models.Model):
 # ----------------------
 # Invoice
 # ----------------------
+from django.db import models
+from django.conf import settings
+from django.utils import timezone
+from collections import defaultdict
+from decimal import Decimal, ROUND_HALF_UP
+
+# ----------------------
+# Invoice
+# ----------------------
 class Invoice(models.Model):
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     invoice_number = models.CharField(max_length=50, unique=True)  # e.g. INV_0001_20250915
@@ -147,9 +156,11 @@ class Invoice(models.Model):
     def __str__(self):
         return self.invoice_number
 
+    # ----------------------
     # Totals
+    # ----------------------
     def taxable_subtotal(self):
-        return sum((item.line_taxable_amount() for item in self.items.all()), Decimal("0.00"))
+        return sum((item.line_taxable_amount for item in self.items.all()), Decimal("0.00"))
 
     def total_discount_amount(self):
         subtotal = self.taxable_subtotal()
@@ -174,6 +185,7 @@ class Invoice(models.Model):
         taxes = self.tax_amounts()
         total = subtotal + taxes["cgst"] + taxes["sgst"] + taxes["igst"]
         return total.quantize(Decimal("0.01"), ROUND_HALF_UP)
+
     @property
     def unit_wise_totals(self):
         """Return dict {unit_label: total_qty} for all items."""
@@ -183,13 +195,13 @@ class Invoice(models.Model):
                 totals[item.unit.label] += float(item.quantity)
         return dict(totals)
 
+
 # ----------------------
 # Invoice Items
-from decimal import Decimal, ROUND_HALF_UP
-
+# ----------------------
 class InvoiceItem(models.Model):
     invoice = models.ForeignKey(Invoice, related_name="items", on_delete=models.CASCADE)
-    product = models.ForeignKey(Product, on_delete=models.PROTECT, null=True, blank=True)
+    product = models.ForeignKey("Product", on_delete=models.PROTECT, null=True, blank=True)
     description = models.CharField(max_length=400, blank=True)
     hsn_sac = models.CharField(max_length=20, blank=True)
     unit = models.ForeignKey("Unit", on_delete=models.PROTECT)
@@ -203,18 +215,37 @@ class InvoiceItem(models.Model):
         """Return custom rate if available, else original rate"""
         return self.custom_rate if self.custom_rate is not None else self.rate
 
+    @property
     def line_amount(self):
         return (self.effective_rate * self.quantity).quantize(Decimal("0.01"), ROUND_HALF_UP)
 
+    @property
     def line_discount_amount(self):
-        return (self.line_amount() * self.discount_percent / 100).quantize(Decimal("0.01"), ROUND_HALF_UP)
+        return (self.line_amount * self.discount_percent / 100).quantize(Decimal("0.01"), ROUND_HALF_UP)
 
+    @property
     def line_taxable_amount(self):
-        return self.line_amount() - self.line_discount_amount()
+        return self.line_amount - self.line_discount_amount
+
+    # ----------------------
+    # GST Helpers
+    # ----------------------
+    @property
+    def gst_percent(self):
+        """Return GST % for this item (based on invoice tax)"""
+        if self.invoice.apply_gst and self.invoice.tax:
+            return self.invoice.tax.rate_percent
+        return None
+
+    @property
+    def gst_amount(self):
+        """Return GST amount for this item"""
+        if not self.gst_percent:
+            return Decimal("0.00")
+        return (self.line_taxable_amount * self.gst_percent / 100).quantize(Decimal("0.01"), ROUND_HALF_UP)
 
     def __str__(self):
         return f"{self.product} ({self.quantity} x {self.effective_rate})"
-
 # ----------------------
 # Audit log
 # ----------------------
