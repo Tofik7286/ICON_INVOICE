@@ -130,6 +130,13 @@ from django.utils import timezone
 from collections import defaultdict
 from decimal import Decimal, ROUND_HALF_UP
 
+from decimal import Decimal, ROUND_HALF_UP
+from collections import defaultdict
+from django.conf import settings
+from django.db import models
+from django.utils import timezone
+
+
 # ----------------------
 # Invoice
 # ----------------------
@@ -159,17 +166,37 @@ class Invoice(models.Model):
     # ----------------------
     # Totals
     # ----------------------
+    @property
     def taxable_subtotal(self):
-        return sum((item.line_taxable_amount for item in self.items.all()), Decimal("0.00"))
+        """Total before any discounts"""
+        return sum((item.line_amount for item in self.items.all()), Decimal("0.00"))
 
-    def total_discount_amount(self):
-        subtotal = self.taxable_subtotal()
+    @property
+    def line_discount_total(self):
+        """Total of all item-level discounts"""
+        return sum((item.line_discount_amount for item in self.items.all()), Decimal("0.00"))
+
+    @property
+    def overall_discount_amount(self):
+        """Overall discount on subtotal (after line discounts)"""
+        base = self.taxable_subtotal - self.line_discount_total
         if self.overall_discount_percent:
-            return (subtotal * self.overall_discount_percent / 100).quantize(Decimal("0.01"), ROUND_HALF_UP)
+            return (base * self.overall_discount_percent / 100).quantize(Decimal("0.01"), ROUND_HALF_UP)
         return Decimal("0.00")
 
+    @property
+    def total_discount_amount(self):
+        """Sum of item discounts + overall discount"""
+        return (self.line_discount_total + self.overall_discount_amount).quantize(Decimal("0.01"), ROUND_HALF_UP)
+
+    @property
+    def net_subtotal(self):
+        """Subtotal after all discounts"""
+        return self.taxable_subtotal - self.total_discount_amount
+
+    @property
     def tax_amounts(self):
-        subtotal = self.taxable_subtotal() - self.total_discount_amount()
+        subtotal = self.net_subtotal
         if not self.apply_gst or not self.tax:
             return {"cgst": Decimal("0.00"), "sgst": Decimal("0.00"), "igst": Decimal("0.00")}
         rate = self.tax.rate_percent
@@ -180,11 +207,21 @@ class Invoice(models.Model):
         cgst = (subtotal * half / 100).quantize(Decimal("0.01"), ROUND_HALF_UP)
         return {"igst": Decimal("0.00"), "cgst": cgst, "sgst": cgst}
 
+    @property
+    def grand_total_raw(self):
+        """Unrounded total"""
+        taxes = self.tax_amounts
+        return self.net_subtotal + taxes["cgst"] + taxes["sgst"] + taxes["igst"]
+
+    @property
+    def round_off(self):
+        """Difference between rounded and actual"""
+        return (self.grand_total - self.grand_total_raw).quantize(Decimal("0.01"), ROUND_HALF_UP)
+
+    @property
     def grand_total(self):
-        subtotal = self.taxable_subtotal() - self.total_discount_amount()
-        taxes = self.tax_amounts()
-        total = subtotal + taxes["cgst"] + taxes["sgst"] + taxes["igst"]
-        return total.quantize(Decimal("0.01"), ROUND_HALF_UP)
+        """Rounded grand total (nearest rupee)"""
+        return self.grand_total_raw.quantize(Decimal("1"), ROUND_HALF_UP)
 
     @property
     def unit_wise_totals(self):

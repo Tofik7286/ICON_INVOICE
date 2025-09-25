@@ -35,6 +35,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     "django_extensions",
     'app1',  # your app
+    'django.contrib.humanize',
+
 ]
 
 AUTH_USER_MODEL = "app1.CustomUser"
