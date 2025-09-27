@@ -145,22 +145,21 @@ def invoice_generate_pdf(request, pk):
     if not (request.user.is_staff or invoice.created_by == request.user):
         raise Http404("Not allowed")
 
-    company = Company.objects.first()
+    # 👇 Pehle Company ki jagah invoice ka from_party bhej do
+    from_party = invoice.from_party  
+
     html_string = render_to_string(
         "invoices/pdf_template.html",
-        {"invoice": invoice, "company": company}
+        {"invoice": invoice, "from_party": from_party}   # 👈 yaha change
     )
 
-    # ✅ Generate PDF in-memory (no saving to media folder)
     html = HTML(string=html_string, base_url=request.build_absolute_uri("/"))
     pdf_bytes = html.write_pdf()
 
-    # ✅ Direct download
     pdf_file_name = f"{invoice.invoice_number}_{invoice.pk}.pdf"
     response = HttpResponse(pdf_bytes, content_type="application/pdf")
     response["Content-Disposition"] = f'attachment; filename="{pdf_file_name}"'
 
-    # ✅ Optional: audit log only (no file save)
     InvoiceAudit.objects.create(
         invoice=invoice,
         user=request.user,

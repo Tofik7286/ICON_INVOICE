@@ -36,17 +36,17 @@ class Company(models.Model):
 # ----------------------
 class Party(models.Model):
     """Both From & To parties stored here."""
-    name = models.CharField(max_length=200)
-    contact_person = models.CharField(max_length=200)
-    phone = models.CharField(max_length=30)
-    email = models.EmailField()
-    address_line1 = models.CharField(max_length=255)
-    address_line2 = models.CharField(max_length=255)
-    city = models.CharField(max_length=100)
-    pincode = models.CharField(max_length=20)
-    state = models.CharField(max_length=100)
-    tax_state_code = models.CharField(max_length=5)
-    gstin = models.CharField(max_length=20, blank=True)
+    name = models.CharField(max_length=200,blank=True, null=True)
+    contact_person = models.CharField(max_length=200,blank=True, null=True)
+    phone = models.CharField(max_length=30,blank=True, null=True)
+    email = models.EmailField(blank=True, null=True)
+    address_line1 = models.CharField(max_length=255,blank=True, null=True)
+    address_line2 = models.CharField(max_length=255,blank=True, null=True)
+    city = models.CharField(max_length=100,blank=True, null=True)
+    pincode = models.CharField(max_length=20,blank=True, null=True)
+    state = models.CharField(max_length=100,blank=True, null=True)
+    tax_state_code = models.CharField(max_length=5,blank=True, null=True)
+    gstin = models.CharField(max_length=20, blank=True, null=True)
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
 
     def __str__(self):

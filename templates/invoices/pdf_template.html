@@ -31,12 +31,13 @@
   <table>
     <tr>
       <td style="width:50%; vertical-align:top; border-right:1px solid #444;">
-        <span class="bold">{{ company.name|upper }}</span><br>
-        {{ company.address_line1 }}{% if company.address_line2 %}, {{ company.address_line2 }}{% endif %}<br>
-        {{ company.city }} - {{ company.pincode }}<br>
-        GSTIN/UIN: {{ company.gstin }}<br>
-        State Name : {{ company.state }}, Code : {{ company.state_code }}<br>
-        <span class="small">Phone: {{ company.phone }} | Email: {{ company.email }}</span><br><br>
+        <span class="bold">{{ from_party.name|upper }}</span><br>
+        {{ from_party.address_line1 }}{% if from_party.address_line2 %}, {{ from_party.address_line2 }}{% endif %}<br>
+        {{ from_party.city }} - {{ from_party.pincode }}<br>
+        GSTIN/UIN: {{ from_party.gstin }}<br>
+        State Name : {{ from_party.state }}, Code : {{ from_party.tax_state_code }}<br>
+        <span class="small">Phone: {{ from_party.phone }} | Email: {{ from_party.email }}</span><br><br>
+
         <hr>
         <span class="bold">Buyer (Bill to)</span><br>
         {{ invoice.to_party.name }}<br>
@@ -171,8 +172,9 @@
 
   <!-- Signature -->
   <div class="signature" style="margin-top:30px; text-align:right;">
-    for <b>{{ company.name|upper }}</b><br><br>
+    for <b>{{ from_party.name|upper }}</b><br><br>
     Authorised Signatory
+
   </div>
 
   <div class="footer">
