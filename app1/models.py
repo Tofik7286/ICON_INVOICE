@@ -283,6 +283,8 @@ class InvoiceItem(models.Model):
 
     def __str__(self):
         return f"{self.product} ({self.quantity} x {self.effective_rate})"
+
+
 # ----------------------
 # Audit log
 # ----------------------

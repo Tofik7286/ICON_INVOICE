@@ -89,8 +89,9 @@ class InvoiceAdmin(admin.ModelAdmin):
     readonly_fields = ("invoice_number", "seq_number", "created_at", "updated_at", "version")
     inlines = [InvoiceItemInline]
 
-    def grand_total(self, obj):
-        return obj.grand_total()
+    def grand_total_display(self, obj):
+        return obj.grand_total
+    grand_total_display.short_description = "Grand Total"  # admin column name
 
 
 # ----------------------
