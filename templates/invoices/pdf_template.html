@@ -9,11 +9,11 @@
     @page { size: A4; margin: 12mm; }
     body { font-family: Arial, sans-serif; font-size: 12px; line-height: 1.4; }
     h2 { text-align: center; margin: 12px 0; text-transform: uppercase; }
-    
+
     table { width: 100%; border-collapse: collapse; margin: 10px 0; }
     table, th, td { border: 1px solid #444; }
     th, td { padding: 8px 6px; vertical-align: top; }
-    
+
     .no-border { border: none !important; }
     .right { text-align: right; }
     .center { text-align: center; }
@@ -74,6 +74,7 @@
         <th>Rate</th>
         <th>per</th>
         <th>Disc. %</th>
+        <th>Disc. Amt</th>
         <th>GST %</th>
         <th>Amount</th>
       </tr>
@@ -95,27 +96,32 @@
         <td class="center">{{ item.quantity|floatformat:0 }} {{ item.unit.label }}</td>
         <td class="right">{{ item.effective_rate|intcomma }}</td>
         <td class="center">{{ item.unit.label }}</td>
+
+        <!-- Discount % -->
         <td class="center">
           {% if item.discount_percent and item.discount_percent|floatformat != '0.00' %}
             {{ item.discount_percent }}%
-          {% else %} —
+          {% else %} 0%
           {% endif %}
         </td>
+
+        <!-- Discount Amt -->
+        <td class="right">
+          {% if item.line_discount_amount %}
+            {{ item.line_discount_amount|intcomma }}
+          {% else %} 0.00
+          {% endif %}
+        </td>
+
+        <!-- GST % -->
         <td class="center">
           {% if item.gst_percent %}
             {{ item.gst_percent }}%
           {% else %} —
           {% endif %}
         </td>
-        <td class="right">{{ item.line_taxable_amount|intcomma }}</td>
-      </tr>
-      {% endfor %}
 
-      <!-- Total Quantity Row -->
-      {% for unit, qty in invoice.unit_wise_totals.items %}
-      <tr>
-        <td colspan="3" class="right bold">Total Qty</td>
-        <td colspan="6" class="left bold">{{ qty|floatformat:0 }} {{ unit }}</td>
+        <td class="right">{{ item.line_taxable_amount|intcomma }}</td>
       </tr>
       {% endfor %}
     </tbody>
@@ -131,12 +137,17 @@
       <td class="right">Subtotal</td>
       <td class="right">{{ invoice.taxable_subtotal|intcomma }}</td>
     </tr>
-    {% if invoice.total_discount_amount %}
-    <tr>
-      <td class="right">Discount</td>
-      <td class="right">-{{ invoice.total_discount_amount|intcomma }}</td>
-    </tr>
+      {% if invoice.total_discount_amount %}
+      <tr>
+        <td class="right">
+          Discount{% if invoice.overall_discount_percent and invoice.overall_discount_percent|floatformat != '0.00' %}
+            ({{ invoice.overall_discount_percent }}%)
+          {% endif %}
+        </td>
+        <td class="right">-{{ invoice.total_discount_amount|intcomma }}</td>
+      </tr>
     {% endif %}
+
     {% if invoice.apply_gst %}
     <tr>
       {% if invoice.is_igst %}
@@ -174,7 +185,6 @@
   <div class="signature" style="margin-top:30px; text-align:right;">
     for <b>{{ from_party.name|upper }}</b><br><br>
     Authorised Signatory
-
   </div>
 
   <div class="footer">
