@@ -14,7 +14,7 @@ from .forms import CustomUserCreationForm, CustomLoginForm
 from django.contrib.auth.decorators import user_passes_test
 from django.shortcuts import render
 from .models import CustomUser
-
+from .forms import *
 from weasyprint import HTML
 
 from .forms import InvoiceForm, InvoiceItemFormSet
@@ -145,7 +145,7 @@ def invoice_generate_pdf(request, pk):
     if not (request.user.is_staff or invoice.created_by == request.user):
         raise Http404("Not allowed")
 
-    # 👇 Pehle Company ki jagah invoice ka from_party bhej do
+    
     from_party = invoice.from_party  
 
     html_string = render_to_string(
@@ -233,3 +233,220 @@ def login_view(request):
 def logout_view(request):
     logout(request)
     return redirect("accounts:login")
+
+# ----------------------
+# Update Invoice
+# ----------------------
+@login_required
+@login_required
+def invoice_update(request, pk):
+    invoice = get_object_or_404(Invoice, pk=pk, is_deleted=False)
+
+    if not request.user.is_staff and invoice.created_by != request.user:
+        raise Http404("You are not allowed to edit this invoice.")
+
+    if request.method == "POST":
+        form = InvoiceForm(request.POST, instance=invoice)
+        formset = InvoiceItemFormSet(request.POST, instance=invoice, prefix="items")
+
+        if form.is_valid() and formset.is_valid():
+            with transaction.atomic():
+                updated_invoice = form.save(commit=False)
+                
+                if updated_invoice.apply_gst:
+                    updated_invoice.is_igst = (updated_invoice.from_party.state != updated_invoice.to_party.state)
+                else:
+                    updated_invoice.is_igst = False
+                updated_invoice.save()
+
+                # ---- START: YAHAN PAR CHANGE HAI ----
+                
+                # Pehle formset ko save karein taaki existing items update ho jayein
+                # aur naye items create ho jayein (bina rate ke)
+                items = formset.save(commit=False)
+                
+                # Ab har item par loop karke rate set karein
+                for item in items:
+                    # Agar item naya hai aur product select kiya hai
+                    if item.product and not item.rate:
+                        item.rate = item.product.rate
+                    item.invoice = updated_invoice
+                    item.save() # Ab item ko save karein
+                
+                formset.save_m2m() # ManyToMany fields ke liye (agar ho toh)
+
+                # ---- END: CHANGE KHATAM ----
+
+                InvoiceAudit.objects.create(
+                    invoice=invoice,
+                    user=request.user,
+                    action="updated",
+                    note=f"Invoice {invoice.invoice_number} updated."
+                )
+                return redirect("invoices:preview", pk=invoice.pk)
+    else:
+        form = InvoiceForm(instance=invoice)
+        formset = InvoiceItemFormSet(instance=invoice, prefix="items")
+        
+    products = Product.objects.values(
+        "id", "hsn_sac", "rate", "default_unit_id", "default_unit__label"
+    )
+
+    return render(
+        request,
+        "invoices/update.html",
+        {
+            "form": form,
+            "formset": formset,
+            "invoice": invoice,
+            "products": list(products),
+        },
+    )
+    invoice = get_object_or_404(Invoice, pk=pk, is_deleted=False)
+
+    # Permission check: Sirf staff ya creator hi edit kar sakta hai
+    if not request.user.is_staff and invoice.created_by != request.user:
+        raise Http404("You are not allowed to edit this invoice.")
+
+    if request.method == "POST":
+        form = InvoiceForm(request.POST, instance=invoice)
+        formset = InvoiceItemFormSet(request.POST, instance=invoice, prefix="items")
+
+        if form.is_valid() and formset.is_valid():
+            with transaction.atomic():
+                # GST logic update
+                updated_invoice = form.save(commit=False)
+                if updated_invoice.apply_gst:
+                    updated_invoice.is_igst = (updated_invoice.from_party.state != updated_invoice.to_party.state)
+                else:
+                    updated_invoice.is_igst = False
+                updated_invoice.save()
+
+                # Save formset
+                formset.save()
+
+                # Audit log
+                InvoiceAudit.objects.create(
+                    invoice=invoice,
+                    user=request.user,
+                    action="updated",
+                    note=f"Invoice {invoice.invoice_number} updated."
+                )
+                return redirect("invoices:preview", pk=invoice.pk)
+    else:
+        form = InvoiceForm(instance=invoice)
+        formset = InvoiceItemFormSet(instance=invoice, prefix="items")
+        
+    products = Product.objects.values(
+        "id", "hsn_sac", "rate", "default_unit_id", "default_unit__label"
+    )
+
+    return render(
+        request,
+        "invoices/update.html", # Hum yeh template abhi banayenge
+        {
+            "form": form,
+            "formset": formset,
+            "invoice": invoice,
+            "products": list(products),
+        },
+    )
+
+
+
+# ----------------------
+# Party CRUD Views
+# ----------------------
+
+@login_required
+def party_list(request):
+    parties = Party.objects.all()
+    return render(request, "parties/list.html", {"parties": parties})
+
+@login_required
+def party_create(request):
+    if request.method == "POST":
+        form = PartyForm(request.POST)
+        if form.is_valid():
+            party = form.save(commit=False)
+            party.created_by = request.user
+            party.save()
+            return redirect("parties:list")
+    else:
+        form = PartyForm()
+    return render(request, "parties/form.html", {"form": form})
+
+@login_required
+def party_update(request, pk):
+    party = get_object_or_404(Party, pk=pk)
+    if request.method == "POST":
+        form = PartyForm(request.POST, instance=party)
+        if form.is_valid():
+            form.save()
+            return redirect("parties:list")
+    else:
+        form = PartyForm(instance=party)
+    return render(request, "parties/form.html", {"form": form, "party": party})
+
+@login_required
+def party_delete(request, pk):
+    party = get_object_or_404(Party, pk=pk)
+    if request.method == "POST":
+        try:
+            party.delete()
+            return redirect("parties:list")
+        except:
+            # Agar party kisi invoice se judi hai to delete nahi hogi
+            error_message = "This party cannot be deleted because it is linked to one or more invoices."
+            return render(request, "parties/confirm_delete.html", {"party": party, "error_message": error_message})
+            
+    return render(request, "parties/confirm_delete.html", {"party": party})
+# ----------------------
+# Product CRUD Views
+# ----------------------
+
+@login_required
+def product_list(request):
+    products = Product.objects.all()
+    return render(request, "products/list.html", {"products": products})
+
+@login_required
+def product_create(request):
+    if request.method == "POST":
+        # request.FILES ko add karna zaroori hai image upload ke liye
+        form = ProductForm(request.POST, request.FILES)
+        if form.is_valid():
+            product = form.save(commit=False)
+            product.created_by = request.user
+            product.save()
+            return redirect("products:list")
+    else:
+        form = ProductForm()
+    return render(request, "products/form.html", {"form": form})
+
+@login_required
+def product_update(request, pk):
+    product = get_object_or_404(Product, pk=pk)
+    if request.method == "POST":
+        # request.FILES ko yahan bhi add karna zaroori hai
+        form = ProductForm(request.POST, request.FILES, instance=product)
+        if form.is_valid():
+            form.save()
+            return redirect("products:list")
+    else:
+        form = ProductForm(instance=product)
+    return render(request, "products/form.html", {"form": form, "product": product})
+
+@login_required
+def product_delete(request, pk):
+    product = get_object_or_404(Product, pk=pk)
+    if request.method == "POST":
+        try:
+            product.delete()
+            return redirect("products:list")
+        except:
+            # Agar product kisi invoice item se juda hai to delete nahi hoga
+            error_message = "This product cannot be deleted because it is linked to one or more invoices."
+            return render(request, "products/confirm_delete.html", {"product": product, "error_message": error_message})
+            
+    return render(request, "products/confirm_delete.html", {"product": product})

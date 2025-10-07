@@ -25,6 +25,8 @@ urlpatterns = [
     path("invoices/", include("app1.urls",namespace="invoices")),
     path("accounts/", include("app1.urls_auth",namespace="accounts")),  # login/logout
     path("users/", include("app1.urls_users", namespace="users")),
+    path("parties/", include("app1.urls_parties", namespace="parties")), 
+    path("products/", include("app1.urls_products", namespace="products"))
 
 
 ]

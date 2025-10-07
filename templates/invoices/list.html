@@ -34,6 +34,7 @@
           <td>₹{{ inv.grand_total }}</td>
           <td>
             <a href="{% url 'invoices:preview' inv.pk %}" class="btn btn-sm btn-info">👁 Preview</a>
+            <a href="{% url 'invoices:update' inv.pk %}" class="btn btn-sm btn-warning">✏️ Edit</a>
             <a href="{% url 'invoices:generate_pdf' inv.pk %}" class="btn btn-sm btn-success">⬇ PDF</a>
             <a href="{% url 'invoices:delete' inv.pk %}" class="btn btn-sm btn-danger"
                onclick="return confirm('Delete this invoice?')">🗑 Delete</a>
@@ -61,6 +62,7 @@
       </div>
       <div class="mt-2 d-flex flex-wrap gap-2">
         <a href="{% url 'invoices:preview' inv.pk %}" class="btn btn-sm btn-info">👁 Preview</a>
+        <a href="{% url 'invoices:update' inv.pk %}" class="btn btn-sm btn-warning">✏️ Edit</a>
         <a href="{% url 'invoices:generate_pdf' inv.pk %}" class="btn btn-sm btn-success">⬇ PDF</a>
         <a href="{% url 'invoices:delete' inv.pk %}" class="btn btn-sm btn-danger"
            onclick="return confirm('Delete this invoice?')">🗑 Delete</a>

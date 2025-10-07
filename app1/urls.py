@@ -1,4 +1,4 @@
-from django.urls import path
+from django.urls import include, path
 from . import views
 
 app_name = "invoices"
@@ -10,4 +10,7 @@ urlpatterns = [
     path("<int:pk>/generate-pdf/", views.invoice_generate_pdf, name="generate_pdf"),
     # path("<int:pk>/download/", views.invoice_download, name="download"),
     path("<int:pk>/delete/", views.invoice_delete, name="delete"),
+    path("<int:pk>/update/", views.invoice_update, name="update"),
+    
+
 ]

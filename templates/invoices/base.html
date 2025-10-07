@@ -37,6 +37,12 @@
           <li class="nav-item">
             <a class="nav-link" href="{% url 'invoices:list' %}">📑 All Invoices</a>
           </li>
+          <li class="nav-item"> 
+            <a class="nav-link" href="{% url 'parties:list' %}">👥 Parties</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="{% url 'products:list' %}">📦 Products</a>
+          </li>
           {% if user.is_staff %}
           <li class="nav-item">
             <span class="nav-link text-warning">👑 Admin</span>
