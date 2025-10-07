@@ -1,0 +1,28 @@
+{% extends "invoices/base.html" %}
+{% block title %}{% if party %}Edit Party{% else %}Create Party{% endif %}{% endblock %}
+
+{% block content %}
+<div class="card p-4 mx-auto" style="max-width: 800px;">
+  <h3 class="mb-4">{% if party %}✏️ Edit Party{% else %}➕ Add New Party{% endif %}</h3>
+  
+  <form method="post">
+    {% csrf_token %}
+    <div class="row">
+      {% for field in form %}
+      <div class="col-md-6 mb-3">
+        <label class="form-label">{{ field.label }}</label>
+        {{ field }}
+        {% if field.errors %}
+          <div class="text-danger small">{{ field.errors.0 }}</div>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    
+    <div class="mt-3">
+      <button type="submit" class="btn btn-success">{% if party %}💾 Save Changes{% else %}💾 Create Party{% endif %}</button>
+      <a href="{% url 'parties:list' %}" class="btn btn-secondary">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}
