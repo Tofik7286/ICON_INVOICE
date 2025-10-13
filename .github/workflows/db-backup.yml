@@ -1,10 +1,10 @@
-name: Daily Postgres Backup (Render)
+name: Daily Postgres Backup
 
 on:
   schedule:
-    # Run daily at 02:00 UTC — change cron as needed
+    # Run daily at 02:00 UTC
     - cron: '0 2 * * *'
-  workflow_dispatch: {}  # allows manual trigger
+  workflow_dispatch: {}  # Allows manual trigger
 
 jobs:
   backup:
@@ -21,11 +21,11 @@ jobs:
           wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
           sudo apt-get update
           sudo apt-get install -y postgresql-client-17
-          # 👉 set PATH so pg_dump/psql use version 17
           echo "/usr/lib/postgresql/17/bin" >> $GITHUB_PATH
 
       - name: Create DB dump (compressed custom format)
         env:
+          
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           PGSSLMODE: require
         run: |
