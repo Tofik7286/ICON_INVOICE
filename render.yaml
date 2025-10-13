@@ -14,11 +14,10 @@ services:
       - key: DJANGO_SETTINGS_MODULE
         value: icon_invoice.settings
       - key: SECRET_KEY
-        generateValue: true  # Render will auto-generate a secure key
+        generateValue: true
       - key: DJANGO_DEBUG
         value: "False"
       - key: ALLOWED_HOSTS
-        value: .onrendexr.com
+        value: .onrender.com 
       - key: DATABASE_URL
-        fromGroup: supabase-credentials
-
+        sync: false 
