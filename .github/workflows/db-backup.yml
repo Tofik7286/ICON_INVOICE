@@ -13,22 +13,19 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Prioritize IPv4 for network connections
-        run: sudo sh -c 'echo "precedence ::ffff:0:0/96 100" >> /etc/gai.conf'
-
-      - name: Install PostgreSQL client 17
+      - name: Install PostgreSQL client and DNS tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y wget ca-certificates
+          sudo apt-get install -y wget ca-certificates dnsutils
           sudo sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
           wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
           sudo apt-get update
           sudo apt-get install -y postgresql-client-17
           echo "/usr/lib/postgresql/17/bin" >> $GITHUB_PATH
 
-      - name: Create DB dump (compressed custom format)
+      - name: Resolve Host and Create DB Dump
         env:
-          PGHOST: ${{ secrets.PGHOST }}
+          PGHOST_NAME: ${{ secrets.PGHOST }}
           PGPORT: ${{ secrets.PGPORT }}
           PGUSER: ${{ secrets.PGUSER }}
           PGPASSWORD: ${{ secrets.PGPASSWORD }}
@@ -36,10 +33,23 @@ jobs:
           PGSSLMODE: require
         run: |
           set -e
+          
+          # Sirf IPv4 address (A record) dhoondho
+          IPV4_HOST=$(dig A +short $PGHOST_NAME | head -n1)
+          echo "Resolved IPv4 address for $PGHOST_NAME is: $IPV4_HOST"
+          
+          if [ -z "$IPV4_HOST" ]; then
+            echo "::error::Could not resolve hostname to an IPv4 address using 'dig A'."
+            exit 1
+          fi
+          
           timestamp=$(date -u +'%Y%m%dT%H%M%SZ')
           filename="db-backup-${timestamp}.dump"
-          echo "Dumping database to $filename..."
-          pg_dump -Fc -f "$filename"
+          echo "Dumping database to $filename from host $IPV4_HOST..."
+          
+          # IP address ka istemal karke backup banao
+          pg_dump -Fc -h "$IPV4_HOST" -f "$filename"
+          
           ls -lh "$filename"
 
       - name: Upload backup as Actions artifact
