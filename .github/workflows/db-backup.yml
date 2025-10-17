@@ -16,7 +16,7 @@ jobs:
       - name: Install PostgreSQL client and DNS tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y wget ca-certificates dnsutils
+          sudo apt-get install -y wget ca-certificates iputils-ping
           sudo sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
           wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
           sudo apt-get update
@@ -25,7 +25,6 @@ jobs:
 
       - name: Resolve Host and Create DB Dump
         env:
-          # Hum saare secrets yahan la rahe hain
           PGHOST_NAME: ${{ secrets.PGHOST }}
           PGPORT: ${{ secrets.PGPORT }}
           PGUSER: ${{ secrets.PGUSER }}
@@ -35,13 +34,13 @@ jobs:
         run: |
           set -e
           
-          # Pehle host ka IPv4 address dhoondho
-          IPV4_HOST=$(dig +short A $PGHOST_NAME | head -n1)
+          # Pehle host ka IPv4 address 'ping' se dhoondho
+          IPV4_HOST=$(ping -c 1 $PGHOST_NAME | head -n1 | awk -F '[()]' '{ print $2 }')
           echo "Resolved IPv4 address for $PGHOST_NAME is: $IPV4_HOST"
           
           # Check karo ki IP mila ya nahi
           if [ -z "$IPV4_HOST" ]; then
-            echo "::error::Could not resolve hostname to an IPv4 address."
+            echo "::error::Could not resolve hostname to an IPv4 address using ping."
             exit 1
           fi
           
