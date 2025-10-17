@@ -13,7 +13,7 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Install PostgreSQL client 17
+      - name: Install PostgreSQL client and DNS tools
         run: |
           sudo apt-get update
           sudo apt-get install -y wget ca-certificates dnsutils
@@ -23,17 +23,10 @@ jobs:
           sudo apt-get install -y postgresql-client-17
           echo "/usr/lib/postgresql/17/bin" >> $GITHUB_PATH
 
-      - name: Resolve Hostname to IPv4 Address
-        id: resolve_ip
-        run: |
-          IPV4_ADDRESS=$(dig +short A ${{ secrets.PGHOST }} | head -n1)
-          echo "Resolved IPv4 address for ${{ secrets.PGHOST }} is: $IPV4_ADDRESS"
-          echo "PGHOST_IPV4=$IPV4_ADDRESS" >> $GITHUB_ENV
-
-      - name: Create DB dump (compressed custom format)
+      - name: Resolve Host and Create DB Dump
         env:
-          # Naye secrets ka istemal
-          PGHOST: ${{ env.PGHOST_IPV4 }} # Hum yahan resolved IP ka istemal kar rahe hain
+          # Hum saare secrets yahan la rahe hain
+          PGHOST_NAME: ${{ secrets.PGHOST }}
           PGPORT: ${{ secrets.PGPORT }}
           PGUSER: ${{ secrets.PGUSER }}
           PGPASSWORD: ${{ secrets.PGPASSWORD }}
@@ -41,10 +34,25 @@ jobs:
           PGSSLMODE: require
         run: |
           set -e
+          
+          # Pehle host ka IPv4 address dhoondho
+          IPV4_HOST=$(dig +short A $PGHOST_NAME | head -n1)
+          echo "Resolved IPv4 address for $PGHOST_NAME is: $IPV4_HOST"
+          
+          # Check karo ki IP mila ya nahi
+          if [ -z "$IPV4_HOST" ]; then
+            echo "::error::Could not resolve hostname to an IPv4 address."
+            exit 1
+          fi
+          
+          # Ab backup banao
           timestamp=$(date -u +'%Y%m%dT%H%M%SZ')
           filename="db-backup-${timestamp}.dump"
-          echo "Dumping database to $filename from host ${{ env.PGHOST_IPV4 }}..."
-          pg_dump -Fc -f "$filename"
+          echo "Dumping database to $filename from host $IPV4_HOST..."
+          
+          # -h flag ka istemal karke IP address pass karo
+          pg_dump -Fc -h "$IPV4_HOST" -f "$filename"
+          
           ls -lh "$filename"
 
       - name: Upload backup as Actions artifact
