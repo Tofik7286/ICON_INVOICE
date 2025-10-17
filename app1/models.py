@@ -109,7 +109,7 @@ from django.utils import timezone
 class Product(models.Model):
     sku = models.CharField(max_length=50, blank=True)
     name = models.CharField(max_length=255)
-    pic = models.ImageField(upload_to='products/', blank=True, null=True)
+    # pic = models.ImageField(upload_to='products/', blank=True, null=True)
     rate = models.DecimalField(max_digits=12, decimal_places=2)  # tax-exclusive
     hsn_sac = models.CharField(max_length=20, default='3306', blank=True)
     default_tax = models.ForeignKey("Tax", on_delete=models.SET_NULL, null=True, blank=True)
