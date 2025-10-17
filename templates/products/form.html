@@ -5,7 +5,7 @@
 <div class="card p-4 mx-auto" style="max-width: 600px;">
   <h3 class="mb-4">{% if product %}✏️ Edit Product{% else %}➕ Add New Product{% endif %}</h3>
   
-  <form method="post" enctype="multipart/form-data">
+  <form method="post">
     {% csrf_token %}
     
     {% for field in form %}
