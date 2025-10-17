@@ -25,15 +25,20 @@ jobs:
 
       - name: Create DB dump (compressed custom format)
         env:
-          
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          # Naye secrets ka istemal
+          PGHOST: ${{ secrets.PGHOST }}
+          PGPORT: ${{ secrets.PGPORT }}
+          PGUSER: ${{ secrets.PGUSER }}
+          PGPASSWORD: ${{ secrets.PGPASSWORD }}
+          PGDATABASE: ${{ secrets.PGDATABASE }}
           PGSSLMODE: require
         run: |
           set -e
           timestamp=$(date -u +'%Y%m%dT%H%M%SZ')
           filename="db-backup-${timestamp}.dump"
           echo "Dumping database to $filename ..."
-          pg_dump -Fc "$DATABASE_URL" -f "$filename"
+        
+          pg_dump -Fc -f "$filename"
           ls -lh "$filename"
 
       - name: Upload backup as Actions artifact
