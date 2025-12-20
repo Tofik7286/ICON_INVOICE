@@ -44,7 +44,8 @@
         {{ invoice.to_party.address_line1 }}{% if invoice.to_party.address_line2 %}, {{ invoice.to_party.address_line2 }}{% endif %}<br>
         {{ invoice.to_party.city }} - {{ invoice.to_party.pincode }}<br>
         State Name : {{ invoice.to_party.state }}, Code : {{ invoice.to_party.tax_state_code }}<br>
-        GSTIN: {{ invoice.to_party.gstin }}
+        GSTIN: {{ invoice.to_party.gstin }}<br>
+        {% if invoice.to_party.phone %}Mobile: {{ invoice.to_party.phone }}{% endif %}
       </td>
 
       <td style="width:50%; vertical-align:top;">
@@ -69,7 +70,7 @@
       <tr>
         <th>Sl No.</th>
         <th>Description of Goods</th>
-        <th>HSN/SAC</th>
+        <th>Cartons</th>
         <th>Quantity</th>
         <th>Rate</th>
         <th>per</th>
@@ -92,7 +93,11 @@
             {{ item.description }}
           {% else %} — {% endif %}
         </td>
-        <td class="center">{{ item.hsn_sac }}</td>
+        <td class="center">
+          {% with cartons=item|cartons_for_item %}
+            {% if cartons %}{{ cartons|floatformat:0 }}{% else %} — {% endif %}
+          {% endwith %}
+        </td>
         <td class="center">{{ item.quantity|floatformat:0 }} {{ item.unit.label }}</td>
         <td class="right">{{ item.effective_rate|intcomma }}</td>
         <td class="center">{{ item.unit.label }}</td>
@@ -133,6 +138,8 @@
       <td class="no-border" width="60%" rowspan="6" style="vertical-align:top;">
         <b>Amount Chargeable (in words)</b><br>
         INR {{ invoice.grand_total|amount_to_words|capfirst }}
+        <br><br>
+        <b>Total Cartons:</b> {% total_cartons invoice %}
       </td>
       <td class="right">Subtotal</td>
       <td class="right">{{ invoice.taxable_subtotal|intcomma }}</td>
