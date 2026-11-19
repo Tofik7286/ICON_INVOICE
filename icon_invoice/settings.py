@@ -11,7 +11,13 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # ---------------------------
 # Security & Debug
 # ---------------------------
-SECRET_KEY = os.environ.get('SECRET_KEY', 'dev-secret-key')
+SECRET_KEY = os.environ.get('SECRET_KEY')
+if not SECRET_KEY:
+    if os.environ.get("DEBUG", "False").lower() == "true":
+        SECRET_KEY = 'dev-secret-key-DO-NOT-USE-IN-PRODUCTION'
+    else:
+        from django.core.exceptions import ImproperlyConfigured
+        raise ImproperlyConfigured("SECRET_KEY environment variable is required in production.")
 
 DEBUG = os.environ.get("DEBUG", "False").lower() == "true"
 

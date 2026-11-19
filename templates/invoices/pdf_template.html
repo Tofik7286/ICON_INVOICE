@@ -139,7 +139,7 @@
         <b>Amount Chargeable (in words)</b><br>
         INR {{ invoice.grand_total|amount_to_words|capfirst }}
         <br><br>
-        <b>Total Cartons:</b> {% total_cartons invoice %}
+        <!-- <b>Total Cartons:</b> {% total_cartons invoice %} -->
       </td>
       <td class="right">Subtotal</td>
       <td class="right">{{ invoice.taxable_subtotal|intcomma }}</td>
